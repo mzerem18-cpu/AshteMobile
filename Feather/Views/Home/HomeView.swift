@@ -29,13 +29,13 @@ struct HomeApp: Codable, Identifiable {
     var fullImageURL: URL? {
         guard let img = image else { return nil }
         if img.hasPrefix("http") { return URL(string: img) }
-        return URL(string: "https://ashtemobile.tututweak.com/\(img)")
+        return URL(string: "https://ashtemobile.site/\(img)")
     }
     
     var fullBannerURL: URL? {
         if let ban = banner {
             if ban.hasPrefix("http") { return URL(string: ban) }
-            return URL(string: "https://ashtemobile.tututweak.com/\(ban)")
+            return URL(string: "https://ashtemobile.site/\(ban)")
         }
         return fullImageURL
     }
@@ -169,7 +169,7 @@ struct HomeView: View {
     
     // هێنانی داتا
     private func loadApps() async {
-        guard let url = URL(string: "https://ashtemobile.tututweak.com/ipa.json") else { return }
+        guard let url = URL(string: "https://ashtemobile.site/ipa.json") else { return }
         var request = URLRequest(url: url)
         request.cachePolicy = .reloadIgnoringLocalCacheData
         do {
