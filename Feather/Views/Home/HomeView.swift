@@ -2,6 +2,9 @@
 //  HomeView.swift
 //  Feather
 //
+//  Created for AshteMobile
+//  Modified to redirect downloads to external website
+//
 
 import SwiftUI
 import NimbleViews
@@ -23,17 +26,16 @@ struct HomeApp: Codable, Identifiable {
     let banner: String?
     let hack: [String]?
 
-    // 💡 گۆڕدرا بۆ وێبسایتە نوێیەکەت
     var fullImageURL: URL? {
         guard let img = image else { return nil }
         if img.hasPrefix("http") { return URL(string: img) }
-        return URL(string: "https://ashtemobile.rf.gd/\(img)")
+        return URL(string: "https://ashtemobile.tututweak.com/\(img)")
     }
     
     var fullBannerURL: URL? {
         if let ban = banner {
             if ban.hasPrefix("http") { return URL(string: ban) }
-            return URL(string: "https://ashtemobile.rf.gd/\(ban)")
+            return URL(string: "https://ashtemobile.tututweak.com/\(ban)")
         }
         return fullImageURL
     }
@@ -41,26 +43,21 @@ struct HomeApp: Codable, Identifiable {
 
 // MARK: - Main Home View
 struct HomeView: View {
-    @StateObject var downloadManager = DownloadManager.shared
     @State private var apps: [HomeApp] = []
-    
-    @State private var showNotification = false
-    @State private var downloadedApp: HomeApp? = nil
     
     // --- بەشی وێنە لاکێشەییەکان ---
     @State private var currentBanner = 0
     let myCustomBanners = [
-        "https://raw.githubusercontent.com/mzerem18-cpu/Portal/refs/heads/main/Images/aste.png", 
-        "https://raw.githubusercontent.com/mzerem18-cpu/Portal/refs/heads/main/Images/app.png"  
+        "https://raw.githubusercontent.com/mzerem18-cpu/Portal/refs/heads/main/Images/aste.png",
+        "https://raw.githubusercontent.com/mzerem18-cpu/Portal/refs/heads/main/Images/app.png"
     ]
     
     let myCustomLinks = [
-        "https://t.me/ashtemobile",             
-        "https://www.instagram.com/ashtemobile"  
+        "https://t.me/ashtemobile",
+        "https://www.instagram.com/ashtemobile"
     ]
     
     let timer = Timer.publish(every: 4, on: .main, in: .common).autoconnect()
-    // -------------------------------------------------------
     
     var groupedApps: [(String, [HomeApp])] {
         let dict = Dictionary(grouping: apps, by: { $0.category ?? "Apps" })
@@ -75,7 +72,7 @@ struct HomeView: View {
                 ScrollView {
                     VStack(spacing: 35) {
                         
-                        // 1. بەشی وێنە لاکێشەییەکان (Custom Banners)
+                        // 1. بەشی وێنە لاکێشەییەکان (Banners)
                         if !myCustomBanners.isEmpty {
                             TabView(selection: $currentBanner) {
                                 ForEach(0..<myCustomBanners.count, id: \.self) { index in
@@ -109,7 +106,7 @@ struct HomeView: View {
                             }
                         }
                         
-                        // 2. بەشی یاری و بەرنامەکان (Categories Section)
+                        // 2. بەشی یاری و بەرنامەکان
                         VStack(alignment: .leading, spacing: 30) {
                             ForEach(groupedApps, id: \.0) { category, categoryApps in
                                 VStack(alignment: .leading, spacing: 16) {
@@ -127,12 +124,10 @@ struct HomeView: View {
                                     ScrollView(.horizontal, showsIndicators: false) {
                                         LazyHStack(spacing: 16) {
                                             ForEach(categoryApps) { app in
-                                                NavigationLink(destination: HomeAppDetailView(app: app, downloadManager: downloadManager) {
-                                                    showDownloadNotification(for: app)
+                                                Button(action: {
+                                                    openWebsite()
                                                 }) {
-                                                    HomeAppCardView(app: app, downloadManager: downloadManager) {
-                                                        showDownloadNotification(for: app)
-                                                    }
+                                                    HomeAppCardView(app: app)
                                                 }
                                                 .buttonStyle(.plain)
                                             }
@@ -145,7 +140,7 @@ struct HomeView: View {
                             }
                         }
                         
-                        // 3. بەشی سۆشیاڵ میدیاکانت (Social Media Footer)
+                        // 3. بەشی سۆشیاڵ میدیاکان
                         SocialMediaFooter()
                             .padding(.top, 10)
                             .padding(.bottom, 40)
@@ -159,65 +154,22 @@ struct HomeView: View {
             .onAppear {
                 Task { await loadApps() }
             }
-            
-            // Notification Banner
-            if showNotification, let app = downloadedApp {
-                notificationBanner(for: app)
-                    .padding(.top, safeAreaTop() + 10)
-                    .zIndex(100)
-            }
         }
     }
     
-    private func showDownloadNotification(for app: HomeApp) {
-        self.downloadedApp = app
-        withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-            self.showNotification = true
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
-            withAnimation(.easeOut(duration: 0.3)) {
-                self.showNotification = false
-            }
+    // 💡 فەنکشنی کردنەوەی وێبسایتەکە
+    private func openWebsite() {
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.impactOccurred()
+        
+        if let url = URL(string: "https://ashtemobile.rf.gd") {
+            UIApplication.shared.open(url)
         }
     }
     
-    @ViewBuilder
-    private func notificationBanner(for app: HomeApp) -> some View {
-        HStack(alignment: .center, spacing: 14) {
-            AsyncImage(url: app.fullImageURL) { image in
-                image.resizable().aspectRatio(contentMode: .fill)
-            } placeholder: {
-                Color(UIColor.secondarySystemBackground)
-            }
-            .frame(width: 44, height: 44)
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            
-            VStack(alignment: .leading, spacing: 3) {
-                Text("App Downloaded")
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
-                    .foregroundColor(.primary)
-                Text("\(app.name) is ready in library.")
-                    .font(.system(size: 13, weight: .regular, design: .rounded))
-                    .foregroundColor(.secondary)
-            }
-            
-            Spacer()
-            
-            Image(systemName: "checkmark.circle.fill")
-                .foregroundColor(.blue)
-                .font(.system(size: 24))
-        }
-        .padding(12)
-        .background(Color(UIColor.systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .shadow(color: Color.black.opacity(0.12), radius: 15, x: 0, y: 8)
-        .padding(.horizontal, 20)
-        .transition(.move(edge: .top).combined(with: .opacity))
-    }
-    
+    // هێنانی داتا
     private func loadApps() async {
-        // 💡 گۆڕدرا بۆ لینکە نوێیەکەت
-        guard let url = URL(string: "https://ashtemobile.rf.gd/ipa.json") else { return }
+        guard let url = URL(string: "https://ashtemobile.tututweak.com/ipa.json") else { return }
         var request = URLRequest(url: url)
         request.cachePolicy = .reloadIgnoringLocalCacheData
         do {
@@ -227,253 +179,14 @@ struct HomeView: View {
                 self.apps = decoded
             }
         } catch {
-            print("Error loading: \(error)")
-        }
-    }
-    
-    private func safeAreaTop() -> CGFloat {
-        let window = UIApplication.shared.connectedScenes
-            .filter({$0.activationState == .foregroundActive})
-            .compactMap({$0 as? UIWindowScene})
-            .first?.windows
-            .filter({$0.isKeyWindow}).first
-        return window?.safeAreaInsets.top ?? 44
-    }
-}
-
-// MARK: - App Detail View
-struct HomeAppDetailView: View {
-    let app: HomeApp
-    @ObservedObject var downloadManager: DownloadManager
-    var onDownloadComplete: () -> Void
-    
-    @Environment(\.presentationMode) var presentationMode
-
-    var body: some View {
-        ZStack {
-            Color(UIColor.systemBackground).ignoresSafeArea()
-            
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    
-                    // Header Image
-                    GeometryReader { proxy in
-                        let minY = proxy.frame(in: .global).minY
-                        let isScrolledDown = minY > 0
-                        let height = isScrolledDown ? 280 + minY : 280
-                        let offset = isScrolledDown ? -minY : 0
-
-                        ZStack(alignment: .top) {
-                            AsyncImage(url: app.fullImageURL) { image in
-                                image.resizable().aspectRatio(contentMode: .fill)
-                            } placeholder: {
-                                Color(UIColor.secondarySystemBackground)
-                            }
-                            .frame(width: proxy.size.width, height: height)
-                            .clipped()
-                            .overlay(
-                                LinearGradient(colors: [.clear, Color(UIColor.systemBackground)], startPoint: .center, endPoint: .bottom)
-                            )
-                            .offset(y: offset)
-                            
-                            // Navigation Buttons
-                            HStack {
-                                Button(action: { presentationMode.wrappedValue.dismiss() }) {
-                                    Image(systemName: "chevron.left")
-                                        .font(.system(size: 16, weight: .bold))
-                                        .foregroundColor(.primary)
-                                        .frame(width: 40, height: 40)
-                                        .background(.ultraThinMaterial)
-                                        .clipShape(Circle())
-                                }
-                                Spacer()
-                                
-                                Button(action: {
-                                    let shareText = "Download \(app.name) from AshteMobile Store!\nhttps://t.me/ashtemobile"
-                                    let av = UIActivityViewController(activityItems: [shareText], applicationActivities: nil)
-                                    UIApplication.shared.windows.first?.rootViewController?.present(av, animated: true, completion: nil)
-                                }) {
-                                    Image(systemName: "square.and.arrow.up")
-                                        .font(.system(size: 16, weight: .bold))
-                                        .foregroundColor(.primary)
-                                        .frame(width: 40, height: 40)
-                                        .background(.ultraThinMaterial)
-                                        .clipShape(Circle())
-                                }
-                            }
-                            .padding(.horizontal, 20)
-                            .padding(.top, safeAreaTop() + 10)
-                        }
-                    }
-                    .frame(height: 280)
-                    
-                    // App Info
-                    HStack(alignment: .center, spacing: 16) {
-                        AsyncImage(url: app.fullImageURL) { image in
-                            image.resizable().aspectRatio(contentMode: .fill)
-                        } placeholder: {
-                            Color(UIColor.secondarySystemBackground)
-                        }
-                        .frame(width: 100, height: 100)
-                        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-                        .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 6)
-                        
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(app.name)
-                                .font(.system(size: 24, weight: .bold, design: .rounded))
-                                .foregroundColor(.primary)
-                            
-                            Text(app.developer ?? "AshteMobile")
-                                .font(.system(size: 14, weight: .medium, design: .rounded))
-                                .foregroundColor(.secondary)
-                            
-                            HomeDownloadButtonView(app: app, downloadManager: downloadManager, onDownloadComplete: onDownloadComplete)
-                                .frame(width: 85)
-                                .padding(.top, 6)
-                        }
-                    }
-                    .padding(.horizontal, 20)
-                    .offset(y: -40)
-                    .padding(.bottom, -20)
-                    
-                    // Stats
-                    HStack(spacing: 12) {
-                        StatCard(icon: "tag.fill", title: "Version", value: app.version ?? "1.0", color: .blue)
-                        StatCard(icon: "shippingbox.fill", title: "Size", value: app.size ?? "Unknown", color: .purple)
-                        StatCard(icon: "square.grid.2x2.fill", title: "Category", value: app.category ?? "App", color: .orange)
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 30)
-                    
-                    // Description
-                    VStack(alignment: .leading, spacing: 14) {
-                        Text("Description")
-                            .font(.system(size: 20, weight: .bold, design: .rounded))
-                            .foregroundColor(.primary)
-                        
-                        VStack(alignment: .leading, spacing: 10) {
-                            if let hacks = app.hack, !hacks.isEmpty {
-                                ForEach(hacks, id: \.self) { hack in
-                                    HStack(alignment: .top, spacing: 10) {
-                                        Image(systemName: "circle.fill")
-                                            .foregroundColor(.blue)
-                                            .font(.system(size: 6))
-                                            .padding(.top, 6)
-                                        Text(hack)
-                                            .font(.system(size: 15, weight: .regular, design: .rounded))
-                                            .foregroundColor(.secondary)
-                                            .lineSpacing(4)
-                                    }
-                                }
-                            } else {
-                                Text("Download \(app.name) now and enjoy smooth performance and regular updates directly from the AshteMobile Store.")
-                                    .font(.system(size: 15, weight: .regular, design: .rounded))
-                                    .foregroundColor(.secondary)
-                                    .lineSpacing(4)
-                            }
-                        }
-                        .padding(16)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color(UIColor.secondarySystemBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 30)
-                    
-                    // Information List
-                    VStack(alignment: .leading, spacing: 14) {
-                        Text("Information")
-                            .font(.system(size: 20, weight: .bold, design: .rounded))
-                            .foregroundColor(.primary)
-                        
-                        VStack(spacing: 0) {
-                            AppInfoRow(title: "Source", value: "AshteMobile Repo", isLast: false)
-                            AppInfoRow(title: "Developer", value: app.developer ?? "Unknown", isLast: false)
-                            AppInfoRow(title: "Size", value: app.size ?? "Unknown", isLast: false)
-                            AppInfoRow(title: "Version", value: app.version ?? "1.0", isLast: false)
-                            AppInfoRow(title: "Identifier", value: app.bundle ?? "com.ashte.\(app.name.replacingOccurrences(of: " ", with: "").lowercased())", isLast: true)
-                        }
-                        .background(Color(UIColor.secondarySystemBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 50)
-                }
-            }
-            .navigationBarHidden(true)
-            .ignoresSafeArea(edges: .top)
-        }
-    }
-    
-    private func safeAreaTop() -> CGFloat {
-        let window = UIApplication.shared.connectedScenes
-            .filter({$0.activationState == .foregroundActive})
-            .compactMap({$0 as? UIWindowScene})
-            .first?.windows
-            .filter({$0.isKeyWindow}).first
-        return window?.safeAreaInsets.top ?? 44
-    }
-}
-
-// MARK: - Components
-struct StatCard: View {
-    let icon: String
-    let title: String
-    let value: String
-    let color: Color
-    
-    var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundColor(color)
-            Text(title)
-                .font(.system(size: 12, weight: .medium, design: .rounded))
-                .foregroundColor(.secondary)
-            Text(value)
-                .font(.system(size: 14, weight: .bold, design: .rounded))
-                .foregroundColor(.primary)
-                .lineLimit(1)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 14)
-        .background(Color(UIColor.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-    }
-}
-
-struct AppInfoRow: View {
-    let title: String
-    let value: String
-    let isLast: Bool
-
-    var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Text(title)
-                    .font(.system(size: 15, weight: .medium, design: .rounded))
-                    .foregroundColor(.secondary)
-                Spacer()
-                Text(value)
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
-                    .foregroundColor(.primary)
-                    .lineLimit(1)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-            
-            if !isLast {
-                Divider()
-                    .padding(.leading, 16)
-            }
+            print("Error loading apps: \(error)")
         }
     }
 }
 
+// MARK: - App Card View
 struct HomeAppCardView: View {
     let app: HomeApp
-    @ObservedObject var downloadManager: DownloadManager
-    var onDownloadComplete: () -> Void 
     
     var body: some View {
         VStack(alignment: .center, spacing: 10) {
@@ -501,7 +214,14 @@ struct HomeAppCardView: View {
             
             Spacer(minLength: 5)
             
-            HomeDownloadButtonView(app: app, downloadManager: downloadManager, onDownloadComplete: onDownloadComplete)
+            // 💡 لێرەدا GETم گۆڕی بۆ OPEN
+            Text("OPEN")
+                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .frame(maxWidth: .infinity)
+                .frame(height: 30)
+                .background(Color.blue.opacity(0.12))
+                .foregroundColor(.blue)
+                .clipShape(Capsule())
         }
         .padding(14)
         .frame(width: 135, height: 200)
@@ -560,152 +280,5 @@ struct ScaleButtonStyle: ButtonStyle {
         configuration.label
             .scaleEffect(configuration.isPressed ? 0.92 : 1)
             .animation(.easeInOut(duration: 0.2), value: configuration.isPressed)
-    }
-}
-
-// MARK: - Downloader & Button
-class HomeAppDownloader: NSObject, ObservableObject, URLSessionDownloadDelegate {
-    @Published var progress: CGFloat = 0
-    @Published var isDownloading = false
-    @Published var isFinished = false
-    
-    private var downloadTask: URLSessionDownloadTask?
-    private var session: URLSession?
-    private var downloadURL: URL?
-    private var onFinished: ((URL) -> Void)?
-    
-    func start(url: URL, onFinished: @escaping (URL) -> Void) {
-        self.downloadURL = url
-        self.onFinished = onFinished
-        self.isDownloading = true
-        self.progress = 0
-        self.isFinished = false
-        
-        self.session = URLSession(configuration: .default, delegate: self, delegateQueue: OperationQueue.main)
-        downloadTask = session?.downloadTask(with: url)
-        downloadTask?.resume()
-    }
-    
-    func stop() {
-        downloadTask?.cancel()
-        session?.invalidateAndCancel()
-        self.isDownloading = false
-        self.progress = 0
-    }
-    
-    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
-        if totalBytesExpectedToWrite > 0 {
-            DispatchQueue.main.async {
-                self.progress = CGFloat(totalBytesWritten) / CGFloat(totalBytesExpectedToWrite)
-            }
-        }
-    }
-    
-    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
-        let tempDir = FileManager.default.temporaryDirectory
-        let fileName = "\(UUID().uuidString)-\(downloadURL?.lastPathComponent ?? "app.ipa")"
-        let destinationURL = tempDir.appendingPathComponent(fileName)
-        
-        try? FileManager.default.removeItem(at: destinationURL)
-        do {
-            try FileManager.default.copyItem(at: location, to: destinationURL)
-            DispatchQueue.main.async {
-                self.isDownloading = false
-                self.isFinished = true
-                self.onFinished?(destinationURL)
-                
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        self.isFinished = false
-                    }
-                }
-            }
-        } catch {
-            DispatchQueue.main.async { self.isDownloading = false }
-        }
-        session.finishTasksAndInvalidate()
-    }
-    
-    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-        if error != nil {
-            DispatchQueue.main.async { self.isDownloading = false }
-        }
-        session.finishTasksAndInvalidate()
-    }
-}
-
-struct HomeDownloadButtonView: View {
-    let app: HomeApp
-    @ObservedObject var downloadManager: DownloadManager
-    var onDownloadComplete: () -> Void 
-    
-    @StateObject private var downloader = HomeAppDownloader()
-    
-    var body: some View {
-        ZStack {
-            if downloader.isFinished {
-                Image(systemName: "checkmark")
-                    .font(.system(size: 14, weight: .bold))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 30)
-                    .background(Color.green.opacity(0.15))
-                    .foregroundColor(.green)
-                    .clipShape(Capsule())
-                    .transition(.scale.combined(with: .opacity))
-            } else if downloader.isDownloading {
-                ZStack {
-                    Circle()
-                        .stroke(Color.gray.opacity(0.2), lineWidth: 3)
-                        .frame(width: 26, height: 26)
-                    
-                    if downloader.progress > 0 {
-                        Circle()
-                            .trim(from: 0, to: downloader.progress)
-                            .stroke(Color.blue, style: StrokeStyle(lineWidth: 3, lineCap: .round))
-                            .rotationEffect(.degrees(-90))
-                            .frame(width: 26, height: 26)
-                            .animation(.linear(duration: 0.2), value: downloader.progress)
-                    } else {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .blue))
-                    }
-                    
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(Color.blue)
-                        .frame(width: 8, height: 8)
-                        .onTapGesture {
-                            withAnimation { downloader.stop() }
-                        }
-                }
-                .frame(height: 30)
-            } else {
-                Button(action: {
-                    if let downloadURL = URL(string: app.url) {
-                        let generator = UIImpactFeedbackGenerator(style: .medium)
-                        generator.impactOccurred()
-                        
-                        withAnimation {
-                            downloader.start(url: downloadURL) { localURL in
-                                _ = downloadManager.startDownload(from: localURL)
-                                DispatchQueue.main.async {
-                                    onDownloadComplete()
-                                }
-                            }
-                        }
-                    }
-                }) {
-                    Text("GET")
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 30)
-                        .background(Color.blue.opacity(0.12))
-                        .foregroundColor(.blue)
-                        .clipShape(Capsule())
-                }
-                .buttonStyle(ScaleButtonStyle()) 
-            }
-        }
-        .animation(.spring(), value: downloader.isDownloading)
-        .animation(.spring(), value: downloader.isFinished)
     }
 }
