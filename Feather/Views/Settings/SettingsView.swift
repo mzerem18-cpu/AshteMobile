@@ -34,7 +34,7 @@ struct SettingsView: View {
                 Section {
                     VStack(spacing: 16) {
                         // Profile Image with Modern Shadow
-                        AsyncImage(url: URL(string: "https://ashtemobile.tututweak.com/a.png")) { image in
+                        AsyncImage(url: URL(string: "https://ashtemobile.site/a.png")) { image in
                             image.resizable()
                                 .scaledToFill()
                                 .frame(width: 90, height: 90)
