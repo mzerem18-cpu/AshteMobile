@@ -89,7 +89,7 @@ struct AppIconView: View {
                                 icon: "safari.fill",
                                 iconColor: .indigo,
                                 title: "Official Website",
-                                url: "https://ashtemobile.tututweak.com"
+                                url: "https://ashtemobile.site"
                             )
                             
                             Divider().padding(.leading, 60)
