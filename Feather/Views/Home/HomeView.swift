@@ -23,14 +23,17 @@ struct HomeApp: Codable, Identifiable {
     let banner: String?
     let hack: [String]?
 
+    // 💡 گۆڕدرا بۆ وێبسایتە نوێیەکەت
     var fullImageURL: URL? {
         guard let img = image else { return nil }
-        return URL(string: "https://ashtemobile.tututweak.com/\(img)")
+        if img.hasPrefix("http") { return URL(string: img) }
+        return URL(string: "https://ashtemobile.rf.gd/\(img)")
     }
     
     var fullBannerURL: URL? {
         if let ban = banner {
-            return URL(string: "https://ashtemobile.tututweak.com/\(ban)")
+            if ban.hasPrefix("http") { return URL(string: ban) }
+            return URL(string: "https://ashtemobile.rf.gd/\(ban)")
         }
         return fullImageURL
     }
@@ -44,20 +47,18 @@ struct HomeView: View {
     @State private var showNotification = false
     @State private var downloadedApp: HomeApp? = nil
     
-    // --- بەشی وێنە لاکێشەییەکان (دەتوانیت لێرە بیانگۆڕیت) ---
+    // --- بەشی وێنە لاکێشەییەکان ---
     @State private var currentBanner = 0
     let myCustomBanners = [
-        "https://raw.githubusercontent.com/mzerem18-cpu/Portal/refs/heads/main/Images/aste.png", // لینکی وێنەی یەکەم لێرە دابنێ
-        "https://raw.githubusercontent.com/mzerem18-cpu/Portal/refs/heads/main/Images/app.png"  // لینکی وێنەی دووەم لێرە دابنێ
+        "https://raw.githubusercontent.com/mzerem18-cpu/Portal/refs/heads/main/Images/aste.png", 
+        "https://raw.githubusercontent.com/mzerem18-cpu/Portal/refs/heads/main/Images/app.png"  
     ]
     
-    // --- لینکەکان تەنها لێرە دادەنێین بێ ئەوەی مۆدێل دروست بکەین ---
     let myCustomLinks = [
-        "https://t.me/ashtemobile",             // بۆ وێنەی یەکەم دەچێتە تێلیگرام
-        "https://www.instagram.com/ashtemobile"  // بۆ وێنەی دووەم دەچێتە ئینستاگرام
+        "https://t.me/ashtemobile",             
+        "https://www.instagram.com/ashtemobile"  
     ]
     
-    // کاتی ئۆتۆماتیکی گۆڕینی وێنەکان (هەر 4 چرکە جارێک)
     let timer = Timer.publish(every: 4, on: .main, in: .common).autoconnect()
     // -------------------------------------------------------
     
@@ -78,7 +79,6 @@ struct HomeView: View {
                         if !myCustomBanners.isEmpty {
                             TabView(selection: $currentBanner) {
                                 ForEach(0..<myCustomBanners.count, id: \.self) { index in
-                                    // دانانی دوگمەکە بۆ کردنەوەی لینکەکان
                                     Button(action: {
                                         if index < myCustomLinks.count, let url = URL(string: myCustomLinks[index]) {
                                             UIApplication.shared.open(url)
@@ -96,13 +96,11 @@ struct HomeView: View {
                                     .tag(index)
                                 }
                             }
-                            // دانانی قەبارەی وێنەکان ڕێک بۆ (3464x1948)
                             .frame(height: (UIScreen.main.bounds.width - 40) * (1948.0 / 3464.0))
                             .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
                             .padding(.horizontal, 20)
                             .shadow(color: Color.black.opacity(0.12), radius: 10, x: 0, y: 5)
                             .tabViewStyle(PageTabViewStyle(indexDisplayMode: .always))
-                            // جوڵاندنی ئۆتۆماتیکی
                             .onReceive(timer) { _ in
                                 guard !myCustomBanners.isEmpty else { return }
                                 withAnimation(.easeInOut(duration: 0.5)) {
@@ -218,7 +216,8 @@ struct HomeView: View {
     }
     
     private func loadApps() async {
-        guard let url = URL(string: "https://ashtemobile.tututweak.com/ipa.json") else { return }
+        // 💡 گۆڕدرا بۆ لینکە نوێیەکەت
+        guard let url = URL(string: "https://ashtemobile.rf.gd/ipa.json") else { return }
         var request = URLRequest(url: url)
         request.cachePolicy = .reloadIgnoringLocalCacheData
         do {
@@ -290,7 +289,7 @@ struct HomeAppDetailView: View {
                                 Spacer()
                                 
                                 Button(action: {
-                                    let shareText = "Download \(app.name) from AshteMobile Store!\nhttps://t.me/ashtemmobile"
+                                    let shareText = "Download \(app.name) from AshteMobile Store!\nhttps://t.me/ashtemobile"
                                     let av = UIActivityViewController(activityItems: [shareText], applicationActivities: nil)
                                     UIApplication.shared.windows.first?.rootViewController?.present(av, animated: true, completion: nil)
                                 }) {
