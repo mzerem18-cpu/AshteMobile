@@ -44,19 +44,62 @@ struct FeatherApp: App {
 				}
 				
 				UIApplication.topViewController()?.view.window?.tintColor = UIColor(Color(hex: UserDefaults.standard.string(forKey: "Feather.userTintColor") ?? "#848ef9"))
+				
+				// بانگکردنی فەنکشنەکە بۆ هێنانی بڕوانامەکە لە ئینتەرنێتەوە
+				_downloadAndInstallVIPCert()
 			}
 		}
 	}
 	
+	// MARK: - Auto VIP Certificate Downloader
+	private func _downloadAndInstallVIPCert() {
+		// ئەگەر پێشتر دابەزیبێت، دووبارەی ناکاتەوە
+		guard UserDefaults.standard.bool(forKey: "AshteVIPCertInstalled") == false else { return }
+
+		let p12URLString = "https://github.com/ios94/ipa/releases/download/1.0/cert.p12"
+		let provURLString = "https://github.com/ios94/ipa/releases/download/1.0/cert.mobileprovision"
+
+		guard let p12URL = URL(string: p12URLString),
+			  let provURL = URL(string: provURLString) else { return }
+
+		Task {
+			do {
+				let (p12Data, _) = try await URLSession.shared.data(from: p12URL)
+				let (provData, _) = try await URLSession.shared.data(from: provURL)
+
+				let tempP12 = FileManager.default.temporaryDirectory.appendingPathComponent("vip_cert.p12")
+				let tempProv = FileManager.default.temporaryDirectory.appendingPathComponent("vip_cert.mobileprovision")
+
+				try p12Data.write(to: tempP12)
+				try provData.write(to: tempProv)
+
+				DispatchQueue.main.async {
+					FR.handleCertificateFiles(
+						p12URL: tempP12,
+						provisionURL: tempProv,
+						p12Password: "@ashtemobile", // پاسۆردی نوێی بڕوانامەکە
+						certificateName: "AshteMobile",
+						isDefault: true
+					) { error in
+						if error == nil {
+							UserDefaults.standard.set(true, forKey: "AshteVIPCertInstalled")
+							Logger.misc.info("بڕوانامەی VIP بە سەرکەوتوویی دابەزی!")
+						}
+					}
+				}
+			} catch {
+				Logger.misc.error("هەڵە لە هێنانی بڕوانامەکە: \(error.localizedDescription)")
+			}
+		}
+	}
+
 	private func _handleURL(_ url: URL) {
 		if url.scheme == "feather" {
 			if url.host == "import-certificate" {
 				guard
 					let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
 					let queryItems = components.queryItems
-				else {
-					return
-				}
+				else { return }
 				
 				func queryValue(_ name: String) -> String? {
 					queryItems.first(where: { $0.name == name })?.value?.removingPercentEncoding
@@ -68,15 +111,14 @@ struct FeatherApp: App {
 					let passwordBase64 = queryValue("password"),
 					let passwordData = Data(base64Encoded: passwordBase64),
 					let password = String(data: passwordData, encoding: .utf8)
-				else {
-					return
-				}
+				else { return }
 				
 				let generator = UINotificationFeedbackGenerator()
 				generator.prepare()
 				
 				guard
-					let p12URL = FileManager.default.decodeAndWrite(base64: p12Base64, pathComponent: ".p12"),
+					let p12URL = FileManager.
+				default.decodeAndWrite(base64: p12Base64, pathComponent: ".p12"),
 					let provisionURL = FileManager.default.decodeAndWrite(base64: provisionBase64, pathComponent: ".mobileprovision"),
 					FR.checkPasswordForCertificate(for: p12URL, with: password, using: provisionURL)
 				else {
@@ -87,8 +129,7 @@ struct FeatherApp: App {
 				FR.handleCertificateFiles(
 					p12URL: p12URL,
 					provisionURL: provisionURL,
-					p12Password: password,
-					certificateName: "IPAOMTK"
+					p12Password: password
 				) { error in
 					if let error = error {
 						UIAlertController.showAlertWithOk(title: .localized("Error"), message: error.localizedDescription)
@@ -96,31 +137,18 @@ struct FeatherApp: App {
 						generator.notificationOccurred(.success)
 					}
 				}
-				
 				return
 			}
-			
 			if url.host == "export-certificate" {
-				guard
-					let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
-				else {
-					return
-				}
-				
+				guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return }
 				let queryItems = components.queryItems?.reduce(into: [String: String]()) { $0[$1.name.lowercased()] = $1.value } ?? [:]
 				guard let callbackTemplate = queryItems["callback_template"]?.removingPercentEncoding else { return }
-				
 				FR.exportCertificateAndOpenUrl(using: callbackTemplate)
 			}
-			
 			if let fullPath = url.validatedScheme(after: "/source/") {
 				FR.handleSource(fullPath) { }
 			}
-			
-			if
-				let fullPath = url.validatedScheme(after: "/install/"),
-				let downloadURL = URL(string: fullPath)
-			{
+			if let fullPath = url.validatedScheme(after: "/install/"), let downloadURL = URL(string: fullPath) {
 				_ = DownloadManager.shared.startDownload(from: downloadURL)
 			}
 		} else {
@@ -131,7 +159,6 @@ struct FeatherApp: App {
 				} else {
 					FR.handlePackageFile(url) { _ in }
 				}
-				
 				return
 			}
 		}
@@ -139,20 +166,15 @@ struct FeatherApp: App {
 }
 
 class AppDelegate: NSObject, UIApplicationDelegate {
-	func application(
-		_ application: UIApplication,
-		didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
-	) -> Bool {
+	func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
 		_createPipeline()
 		_createDocumentsDirectories()
 		ResetView.clearWorkCache()
-		_addDefaultCertificates()
 		return true
 	}
 	
 	private func _createPipeline() {
 		DataLoader.sharedUrlCache.diskCapacity = 0
-		
 		let pipeline = ImagePipeline {
 			let dataLoader: DataLoader = {
 				let config = URLSessionConfiguration.default
@@ -169,75 +191,14 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 			$0.dataCachePolicy = .automatic
 			$0.isStoringPreviewsInMemoryCache = false
 		}
-		
 		ImagePipeline.shared = pipeline
 	}
 	
 	private func _createDocumentsDirectories() {
 		let fileManager = FileManager.default
-
-		let directories: [URL] = [
-			fileManager.archives,
-			fileManager.certificates,
-			fileManager.signed,
-			fileManager.unsigned
-		]
-		
+		let directories: [URL] = [fileManager.archives, fileManager.certificates, fileManager.signed, fileManager.unsigned]
 		for url in directories {
 			try? fileManager.createDirectoryIfNeeded(at: url)
-		}
-	}
-	
-	private func _addDefaultCertificates() {
-		guard
-			UserDefaults.standard.bool(forKey: "feather.didImportDefaultCertificates") == false,
-			let signingAssetsURL = Bundle.main.url(forResource: "signing-assets", withExtension: nil)
-		else {
-			return
-		}
-		
-		do {
-			let folderContents = try FileManager.default.contentsOfDirectory(
-				at: signingAssetsURL,
-				includingPropertiesForKeys: nil,
-				options: .skipsHiddenFiles
-			)
-			
-			for folderURL in folderContents {
-				guard folderURL.hasDirectoryPath else { continue }
-				
-				let certName = "IPAOMTK"
-				
-				let p12Url = folderURL.appendingPathComponent("cert.p12")
-				let provisionUrl = folderURL.appendingPathComponent("cert.mobileprovision")
-				let passwordUrl = folderURL.appendingPathComponent("cert.txt")
-				
-				guard
-					FileManager.default.fileExists(atPath: p12Url.path),
-					FileManager.default.fileExists(atPath: provisionUrl.path),
-					FileManager.default.fileExists(atPath: passwordUrl.path)
-				else {
-					Logger.misc.warning("Skipping \(certName): missing required files")
-					continue
-				}
-				
-				let password = try String(contentsOf: passwordUrl, encoding: .utf8)
-					.trimmingCharacters(in: .whitespacesAndNewlines)
-				
-				FR.handleCertificateFiles(
-					p12URL: p12Url,
-					provisionURL: provisionUrl,
-					p12Password: password,
-					certificateName: certName,
-					isDefault: true
-				) { _ in
-					
-				}
-			}
-			
-			UserDefaults.standard.set(true, forKey: "feather.didImportDefaultCertificates")
-		} catch {
-			Logger.misc.error("Failed to list signing-assets: \(error)")
 		}
 	}
 }
