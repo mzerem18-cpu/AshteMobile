@@ -162,7 +162,7 @@ struct HomeView: View {
         let generator = UIImpactFeedbackGenerator(style: .medium)
         generator.impactOccurred()
         
-        if let url = URL(string: "https://ashtemobile.rf.gd") {
+        if let url = URL(string: "https://ashtemobile.site") {
             UIApplication.shared.open(url)
         }
     }
