@@ -35,7 +35,7 @@ struct HomeApp: Codable, Identifiable {
     var fullBannerURL: URL? {
         if let ban = banner {
             if ban.hasPrefix("http") { return URL(string: ban) }
-            return URL(string: "https://ashtemobile.site\(ban)")
+            return URL(string: "https://ashtemobile.site/\(ban)")
         }
         return fullImageURL
     }
