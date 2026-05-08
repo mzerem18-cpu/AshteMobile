@@ -17,7 +17,7 @@ struct AboutView: View {
 			Section {
 				VStack {
 					// وێنەی لۆگۆکەت
-					AsyncImage(url: URL(string: "https://ashtemobile.tututweak.com/a.png")) { image in
+					AsyncImage(url: URL(string: "https://ashtemobile.site/a.png")) { image in
 						image.resizable().scaledToFit()
 					} placeholder: {
 						ProgressView()
