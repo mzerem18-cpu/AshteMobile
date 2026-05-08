@@ -35,7 +35,7 @@ struct HomeApp: Codable, Identifiable {
     var fullBannerURL: URL? {
         if let ban = banner {
             if ban.hasPrefix("http") { return URL(string: ban) }
-            return URL(string: "https://ashtemobile.site/\(ban)")
+            return URL(string: "https://ashtemobile.site\(ban)")
         }
         return fullImageURL
     }
@@ -48,8 +48,8 @@ struct HomeView: View {
     // --- بەشی وێنە لاکێشەییەکان ---
     @State private var currentBanner = 0
     let myCustomBanners = [
-        "https://raw.githubusercontent.com/mzerem18-cpu/Portal/refs/heads/main/Images/aste.png",
-        "https://raw.githubusercontent.com/mzerem18-cpu/Portal/refs/heads/main/Images/app.png"
+        "https://ashtemobile.site/img/t.png",
+        "https://ashtemobile.site/img/i.png"
     ]
     
     let myCustomLinks = [
