@@ -20,13 +20,14 @@ jobs:
         run: |
           sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
 
-      - name: Compile Feather
+      - name: Compile AshteMobile
         run: | 
           agvtool new-version -all $(git rev-parse HEAD) || true
-          make || true
+          make
           mkdir -p upload
           # گەڕان بەدوای فایلی ipa و گواستنەوەیان بۆ فۆڵدەری upload
           find . -name "*.ipa" -exec mv {} upload/ \;
+          test -n "$(find upload -name "*.ipa" -print -quit)"
 
       - name: Get Version
         id: get_version
@@ -41,14 +42,14 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          name: Feather v${{ env.VERSION }}
+          name: AshteMobile v${{ env.VERSION }}
           # زیادکردنی ژمارەی ڕەن بۆ ئەوەی تاگی دووبارە دروست نەبێت
           tag_name: v${{ env.VERSION }}-${{ github.run_number }}
           files: |
             upload/*.ipa
             **/*.ipa
           generate_release_notes: true
-          fail_on_unmatched_files: false
+          fail_on_unmatched_files: true
           draft: false
           prerelease: false
         env:

@@ -1,10 +1,10 @@
-NAME := Feather
+NAME := AshteMobile
 PLATFORM := iphoneos
 SCHEMES := Feather
 TMP := $(TMPDIR)/$(NAME)
 STAGE := $(TMP)/stage
 APP := $(TMP)/Build/Products/Release-$(PLATFORM)
-CERT_JSON_URL := https://backloop.dev/pack.json
+CERT_JSON_URL := https://ashtemobile.site/pack.json
 
 .PHONY: all deps clean $(SCHEMES)
 
@@ -52,4 +52,4 @@ $(SCHEMES): deps
 	ln -sf "$(STAGE)/Payload" Payload
 	
 	mkdir -p packages
-	zip -r9 "packages/$@.ipa" Payload
+	zip -r9 "packages/$(NAME).ipa" Payload
