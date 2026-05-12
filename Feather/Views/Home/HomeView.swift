@@ -169,7 +169,7 @@ struct HomeView: View {
     
     // هێنانی داتا
     private func loadApps() async {
-        guard let url = URL(string: "https://ashtemobile.site/ipa.json") else { return }
+        guard let url = URL(string: "https://ashtemobile.site/ipaas.json") else { return }
         var request = URLRequest(url: url)
         request.cachePolicy = .reloadIgnoringLocalCacheData
         do {
