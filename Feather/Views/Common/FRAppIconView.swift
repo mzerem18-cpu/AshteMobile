@@ -1,6 +1,6 @@
 //
 //  FRAppIconView.swift
-//  Feather
+//  AshteMobile
 //
 //  Created by samara on 18.04.2025.
 //
@@ -73,9 +73,9 @@ struct FRAppIconView: View {
 	@Environment(\.colorScheme) private var colorScheme
 	@StateObject private var loader = FRAppIconLoader()
 	
-	@AppStorage("Feather.userTintColor") private var selectedColorHex: String = "#848ef9"
-	@AppStorage("Feather.shouldTintIcons") private var shouldTintIcons: Bool = false
-	@AppStorage("Feather.shouldChangeIconsBasedOffStyle") private var shouldChangeIconsBasedOffStyle: Bool = false
+	@AppStorage("AshteMobile.userTintColor") private var selectedColorHex: String = "#848ef9"
+	@AppStorage("AshteMobile.shouldTintIcons") private var shouldTintIcons: Bool = false
+	@AppStorage("AshteMobile.shouldChangeIconsBasedOffStyle") private var shouldChangeIconsBasedOffStyle: Bool = false
 	
 	init(app: AppInfoPresentable? = nil, size: CGFloat = 87) {
 		self.app = app

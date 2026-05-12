@@ -1,6 +1,6 @@
 //
-//  FeatherApp.swift
-//  Feather
+//  AshteMobileApp.swift
+//  AshteMobile
 //
 //  Created by samara on 10.04.2025.
 //  Safe Onboarding Integrated
@@ -12,7 +12,7 @@ import IDeviceSwift
 import OSLog
 
 @main
-struct FeatherApp: App {
+struct AshteMobileApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     
     let heartbeat = HeartbeatManager.shared
@@ -63,11 +63,11 @@ struct FeatherApp: App {
                 }
             }
             .onAppear {
-                if let style = UIUserInterfaceStyle(rawValue: UserDefaults.standard.integer(forKey: "Feather.userInterfaceStyle")) {
+                if let style = UIUserInterfaceStyle(rawValue: UserDefaults.standard.integer(forKey: "AshteMobile.userInterfaceStyle")) {
                     UIApplication.topViewController()?.view.window?.overrideUserInterfaceStyle = style
                 }
                 
-                UIApplication.topViewController()?.view.window?.tintColor = UIColor(Color(hex: UserDefaults.standard.string(forKey: "Feather.userTintColor") ?? "#848ef9"))
+                UIApplication.topViewController()?.view.window?.tintColor = UIColor(Color(hex: UserDefaults.standard.string(forKey: "AshteMobile.userTintColor") ?? "#848ef9"))
                 
                 _downloadAndInstallVIPCert()
             }
@@ -116,7 +116,7 @@ struct FeatherApp: App {
     }
 
     private func _handleURL(_ url: URL) {
-        if url.scheme == "feather" {
+        if url.scheme == "ashte" {
             if url.host == "import-certificate" {
                 guard
                     let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
@@ -202,7 +202,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
                 config.urlCache = nil
                 return DataLoader(configuration: config)
             }()
-            let dataCache = try? DataCache(name: "thewonderofyou.Feather.datacache")
+            let dataCache = try? DataCache(name: "ashtemobile.datacache")
             let imageCache = Nuke.ImageCache()
             dataCache?.sizeLimit = 500 * 1024 * 1024
             imageCache.costLimit = 100 * 1024 * 1024

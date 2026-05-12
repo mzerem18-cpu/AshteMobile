@@ -1,6 +1,6 @@
 //
 //  SettingsTunnelView.swift
-//  Feather (idevice)
+//  AshteMobile (idevice)
 //
 //  Created by samara on 29.04.2025.
 //
@@ -57,7 +57,7 @@ struct TunnelView: View {
 				
 				if isLocalDevVpnAvailable {
 					Button(.localized("Connect to LocalDevVPN"), systemImage: "link") {
-						UIApplication.open("localdevvpn://enable?scheme=feather")
+						UIApplication.open("localdevvpn://enable?scheme=ashte")
 					}
 				} else {
 					Button(.localized("Download LocalDevVPN"), systemImage: "arrow.down.app") {

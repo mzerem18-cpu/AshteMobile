@@ -1,6 +1,6 @@
 //
 //  SigningHandler.swift
-//  Feather
+//  AshteMobile
 //
 //  Created by samara on 17.04.2025.
 //
@@ -33,7 +33,7 @@ final class SigningHandler: NSObject {
 		self._app = app
 		self._options = options
 		self._uniqueWorkDir = _fileManager.temporaryDirectory
-			.appendingPathComponent("FeatherSigning_\(_uuid)", isDirectory: true)
+			.appendingPathComponent("AshteMobileSigning_\(_uuid)", isDirectory: true)
 		super.init()
 	}
 	
@@ -169,7 +169,7 @@ final class SigningHandler: NSObject {
 	}
 	
 	private func _directory() async throws -> URL {
-		// Documents/Feather/Signed/\(UUID)
+		// Documents/AshteMobile/Signed/\(UUID)
 		_fileManager.signed(_uuid)
 	}
 	

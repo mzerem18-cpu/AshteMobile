@@ -1,6 +1,6 @@
 //
 //  TabbarController.swift
-//  feather
+//  ashtemobile
 //
 //  Created by samara on 5/17/24.
 //  Copyright (c) 2024 Samara M (khcrysalis)
@@ -12,7 +12,7 @@ import NukeUI
 @available(iOS 18, *)
 struct ExtendedTabbarView: View {
 	@Environment(\.horizontalSizeClass) var horizontalSizeClass
-	@AppStorage("Feather.tabCustomization") var customization = TabViewCustomization()
+	@AppStorage("AshteMobile.tabCustomization") var customization = TabViewCustomization()
 	@StateObject var viewModel = SourcesViewModel.shared
 	
 	@State private var _isAddingPresenting = false

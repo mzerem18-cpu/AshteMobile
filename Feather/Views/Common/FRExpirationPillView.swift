@@ -1,6 +1,6 @@
 //
 //  FRExpirationPillView.swift
-//  Feather
+//  AshteMobile
 //
 //  Created by samara on 7.05.2025.
 //

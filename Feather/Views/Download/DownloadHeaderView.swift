@@ -1,6 +1,6 @@
 //
 //  DownloadHeaderView.swift
-//  Feather
+//  AshteMobile
 //
 //  Created by samara on 16.05.2025.
 //

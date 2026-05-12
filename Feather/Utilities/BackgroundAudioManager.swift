@@ -1,6 +1,6 @@
 //
 //  BackgroundAudioManager.swift
-//  Feather
+//  AshteMobile
 //
 //  Created by Nagata Asami on 12/10/25.
 //

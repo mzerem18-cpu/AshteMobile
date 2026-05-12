@@ -1,6 +1,6 @@
 //
 //  ScreenshotPreviewView.swift
-//  Feather
+//  AshteMobile
 //
 //  Created by Nagata Asami on 2/8/25.
 //

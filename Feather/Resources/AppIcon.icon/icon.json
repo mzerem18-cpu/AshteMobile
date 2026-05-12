@@ -33,12 +33,12 @@
       "layers" : [
         {
           "image-name" : "ashte.png",
-          "name" : "feather"
+          "name" : "ashtemobile"
         },
         {
           "glass" : false,
           "image-name" : "ashte.png",
-          "name" : "feather 5",
+          "name" : "ashtemobile shadow",
           "opacity" : 0.14
         }
       ],

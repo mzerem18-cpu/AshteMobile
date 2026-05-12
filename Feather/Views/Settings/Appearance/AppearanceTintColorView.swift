@@ -1,6 +1,6 @@
 //
 //  AppearanceTintColorView.swift
-//  Feather
+//  AshteMobile
 //
 //  Created by samara on 14.06.2025.
 //
@@ -9,7 +9,7 @@ import SwiftUI
 
 // MARK: - View
 struct AppearanceTintColorView: View {
-	@AppStorage("Feather.userTintColor") private var _selectedColorHex: String = "#848ef9"
+	@AppStorage("AshteMobile.userTintColor") private var _selectedColorHex: String = "#848ef9"
 	private let _tintOptions: [(name: String, hex: String)] = [
 		("Default", 		"#848ef9"),
 		("V2", 				"#B496DC"),

@@ -1,6 +1,6 @@
 //
 //  SigningOptionsDictView.swift
-//  Feather
+//  AshteMobile
 //
 //  Created by samara on 15.04.2025.
 //

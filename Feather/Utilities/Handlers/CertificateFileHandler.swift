@@ -1,6 +1,6 @@
 //
 //  CertificateFileHandler.swift
-//  Feather
+//  AshteMobile
 //
 //  Created by samara on 15.04.2025.
 //
@@ -67,7 +67,7 @@ final class CertificateFileHandler: NSObject {
 	}
 	
 	private func _directory() async throws -> URL {
-		// Documents/Feather/Certificates/\(UUID)
+		// Documents/AshteMobile/Certificates/\(UUID)
 		_fileManager.certificates(_uuid)
 	}
 }

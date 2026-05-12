@@ -1,6 +1,6 @@
 //
 //  CertificatesInfoView.swift
-//  Feather
+//  AshteMobile
 //
 //  Created by samara on 20.04.2025.
 //

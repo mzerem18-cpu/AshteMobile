@@ -1,6 +1,6 @@
 //
 //  SourcesCellView.swift
-//  Feather
+//  AshteMobile
 //
 
 import SwiftUI

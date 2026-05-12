@@ -1,6 +1,6 @@
 //
 //  MachOUtils.h
-//  Feather
+//  AshteMobile
 //
 //  Created by samara on 12.06.2025.
 //

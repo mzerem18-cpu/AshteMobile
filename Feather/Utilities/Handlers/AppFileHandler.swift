@@ -1,6 +1,6 @@
 //
 //  IPAHandler.swift
-//  Feather
+//  AshteMobile
 //
 //  Created by samara on 11.04.2025.
 //
@@ -29,7 +29,7 @@ final class AppFileHandler: NSObject, @unchecked Sendable {
 		self._install = install
 		self._download = download
 		self._uniqueWorkDir = _fileManager.temporaryDirectory
-			.appendingPathComponent("FeatherImport_\(_uuid)", isDirectory: true)
+			.appendingPathComponent("AshteMobileImport_\(_uuid)", isDirectory: true)
 		
 		super.init()
 		Logger.misc.debug("Import initiated for: \(self._ipa.lastPathComponent) with ID: \(self._uuid)")
@@ -124,7 +124,7 @@ final class AppFileHandler: NSObject, @unchecked Sendable {
 	}
 	
 	private func _directory() async throws -> URL {
-		// Documents/Feather/Unsigned/\(UUID)
+		// Documents/AshteMobile/Unsigned/\(UUID)
 		_fileManager.unsigned(_uuid)
 	}
 	

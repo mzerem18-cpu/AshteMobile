@@ -1,6 +1,6 @@
 //
 //  AppIconView.swift
-//  Feather
+//  AshteMobile
 //
 //  Created by samara on 19.06.2025.
 //  Modernized Premium UI Integrated

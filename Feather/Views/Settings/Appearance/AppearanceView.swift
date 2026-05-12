@@ -1,6 +1,6 @@
 //
 //  AppearanceView.swift
-//  Feather
+//  AshteMobile
 //
 //  Created by samara on 7.05.2025.
 //  Modernized Premium UI Integrated
@@ -12,23 +12,23 @@ import UIKit
 
 // MARK: - View
 struct AppearanceView: View {
-    @AppStorage("Feather.userInterfaceStyle")
+    @AppStorage("AshteMobile.userInterfaceStyle")
     private var _userIntefacerStyle: Int = UIUserInterfaceStyle.unspecified.rawValue
     
-    @AppStorage("Feather.shouldTintIcons")
+    @AppStorage("AshteMobile.shouldTintIcons")
     private var _shouldTintIcons: Bool = false
     
-    @AppStorage("Feather.shouldChangeIconsBasedOffStyle")
+    @AppStorage("AshteMobile.shouldChangeIconsBasedOffStyle")
     private var _shouldChangeIconsBasedOffStyle: Bool = false
     
-    @AppStorage("Feather.storeCellAppearance")
+    @AppStorage("AshteMobile.storeCellAppearance")
     private var _storeCellAppearance: Int = 0
     private let _storeCellAppearanceMethods: [(name: String, desc: String)] = [
         (.localized("Standard"), .localized("Default style for the app, only includes subtitle.")),
         (.localized("Big Description"), .localized("Adds the localized description of the app."))
     ]
     
-    @AppStorage("Feather.userTintColor")
+    @AppStorage("AshteMobile.userTintColor")
     private var _selectedColorHex: String = "#848ef9"
     
     private var _tintColorBinding: Binding<Color> {

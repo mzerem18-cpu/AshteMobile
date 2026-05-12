@@ -1,6 +1,6 @@
 //
 //  SourceAppsView.swift
-//  Feather
+//  AshteMobile
 //
 //  Created by samara on 1.05.2025.
 //
@@ -29,8 +29,8 @@ extension SourceAppsView {
 
 // MARK: - View
 struct SourceAppsView: View {
-	@AppStorage("Feather.sortOptionRawValue") private var _sortOptionRawValue: String = SortOption.default.rawValue
-	@AppStorage("Feather.sortAscending") private var _sortAscending: Bool = true
+	@AppStorage("AshteMobile.sortOptionRawValue") private var _sortOptionRawValue: String = SortOption.default.rawValue
+	@AppStorage("AshteMobile.sortAscending") private var _sortAscending: Bool = true
 	
 	@State private var _sortOption: SortOption = .default
 	@State private var _selectedRoute: SourceAppRoute?

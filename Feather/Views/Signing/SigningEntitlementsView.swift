@@ -1,6 +1,6 @@
 //
 //  SigningEntitlementsView.swift
-//  Feather
+//  AshteMobile
 //
 //  Created by samara on 20.04.2025.
 //
@@ -38,7 +38,7 @@ struct SigningEntitlementsView: View {
 				onDocumentsPicked: { urls in
 					guard let selectedFileURL = urls.first else { return }
 					
-					FileManager.default.moveAndStore(selectedFileURL, with: "FeatherEntitlement") { url in
+					FileManager.default.moveAndStore(selectedFileURL, with: "AshteMobileEntitlement") { url in
 						bindingValue = url
 					}
 				}

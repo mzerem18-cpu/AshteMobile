@@ -1,6 +1,6 @@
 //
 //  SourcesViewModel.swift
-//  Feather
+//  AshteMobile
 //
 //  Created by samara on 30.04.2025.
 //

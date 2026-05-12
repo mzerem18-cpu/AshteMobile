@@ -1,6 +1,6 @@
 //
 //  InstallProgressView.swift
-//  Feather
+//  AshteMobile
 //
 //  Created by samara on 23.04.2025.
 //

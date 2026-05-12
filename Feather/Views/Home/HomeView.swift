@@ -1,6 +1,6 @@
 //
 //  HomeView.swift
-//  Feather
+//  AshteMobile
 //
 //  Created for AshteMobile
 //  Modified to redirect downloads to external website

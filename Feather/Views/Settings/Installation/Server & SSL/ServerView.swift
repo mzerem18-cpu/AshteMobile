@@ -1,6 +1,6 @@
 //
 //  ServerView.swift
-//  Feather
+//  AshteMobile
 //
 //  Created by samara on 6.05.2025.
 //
@@ -48,8 +48,8 @@ extension ServerView {
 
 // MARK: - View
 struct ServerView: View {
-	@AppStorage("Feather.ipFix") private var _ipFix: Bool = false
-	@AppStorage("Feather.serverMethod") private var _serverMethod: Int = 0
+	@AppStorage("AshteMobile.ipFix") private var _ipFix: Bool = false
+	@AppStorage("AshteMobile.serverMethod") private var _serverMethod: Int = 0
 	private let _serverMethods: [String] = [.localized("Fully Local"), .localized("Semi Local")]
 	
 	private let _dataService = NBFetchService()

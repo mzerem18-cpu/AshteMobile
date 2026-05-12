@@ -1,6 +1,6 @@
 //
 //  AboutView.swift
-//  Feather
+//  AshteMobile
 //
 //  Modified for AshteMobile
 //

@@ -1,6 +1,6 @@
 //
 //  SourceNewsCardInfoView.swift
-//  Feather
+//  AshteMobile
 //
 //  Created by samara on 8.06.2025.
 //

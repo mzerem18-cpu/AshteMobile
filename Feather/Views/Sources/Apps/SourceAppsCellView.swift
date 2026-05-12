@@ -1,6 +1,6 @@
 //
 //  SourceAppsCellView.swift
-//  Feather
+//  AshteMobile
 //
 //  Created by samara on 3.05.2025.
 //
@@ -13,7 +13,7 @@ import NukeUI
 
 // thats a whole pharaghraph of codes
 struct SourceAppsCellView: View {
-	@AppStorage("Feather.storeCellAppearance") private var _storeCellAppearance: Int = 0
+	@AppStorage("AshteMobile.storeCellAppearance") private var _storeCellAppearance: Int = 0
 	
 	var source: ASRepository
 	var app: ASRepository.App

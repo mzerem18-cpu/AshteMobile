@@ -1,6 +1,6 @@
 //
 //  SigningOptionsDylibSharedView.swift
-//  Feather
+//  AshteMobile
 //
 //  Created by samara on 19.04.2025.
 //

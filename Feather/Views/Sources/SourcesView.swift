@@ -7,7 +7,7 @@ import NimbleViews
 struct SourcesView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     #if !NIGHTLY && !DEBUG
-    @AppStorage("Feather.shouldStar") private var _shouldStar: Int = 0
+    @AppStorage("AshteMobile.shouldStar") private var _shouldStar: Int = 0
     #endif
     @StateObject var viewModel = SourcesViewModel.shared
     @State private var _isAddingPresenting = false

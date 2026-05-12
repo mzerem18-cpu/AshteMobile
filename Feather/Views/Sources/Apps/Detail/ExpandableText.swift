@@ -1,6 +1,6 @@
 //
 //  ExpandableText.swift
-//  Feather
+//  AshteMobile
 //
 //  Created by samsam on 7/26/25.
 //

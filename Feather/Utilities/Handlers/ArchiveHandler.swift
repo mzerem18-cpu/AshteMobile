@@ -1,6 +1,6 @@
 //
 //  ArchiveHandler.swift
-//  Feather
+//  AshteMobile
 //
 //  Created by samara on 22.04.2025.
 //
@@ -25,7 +25,7 @@ final class ArchiveHandler: NSObject {
 		self.viewModel = viewModel
 		self._app = app
 		self._uniqueWorkDir = _fileManager.temporaryDirectory
-			.appendingPathComponent("FeatherInstall_\(_uuid)", isDirectory: true)
+			.appendingPathComponent("AshteMobileInstall_\(_uuid)", isDirectory: true)
 		
 		super.init()
 	}
@@ -88,6 +88,6 @@ final class ArchiveHandler: NSObject {
 	}
 	
 	static func getCompressionLevel() -> Int {
-		UserDefaults.standard.integer(forKey: "Feather.compressionLevel")
+		UserDefaults.standard.integer(forKey: "AshteMobile.compressionLevel")
 	}
 }
