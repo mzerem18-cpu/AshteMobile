@@ -3,82 +3,107 @@
 //  AshteMobile
 //
 //  Created by samara on 23.04.2025.
-//  Safe Modern Design
+//  Ultra Premium & Minimalist UI by Gemini
 //
 
 import SwiftUI
 import IDeviceSwift
 
 struct InstallProgressView: View {
-    @State private var _isPulsing = false
+    @State private var _pulse = false
     
     var app: AppInfoPresentable
     @ObservedObject var viewModel: InstallerStatusViewModel
     
     var body: some View {
-        VStack(spacing: 25) {
-            // بەشی ئایکۆن و بازنەی پێشکەوتن
+        VStack(spacing: 24) {
+            
+            // 1. بەشی ئایکۆن و بازنەی پێشکەوتن (زۆر خاوێن و شیک)
             ZStack {
-                // تیشکێکی شین لە پشت ئایکۆنەکە
+                // باکگراوندی درەوشاوە لە پشت ئایکۆنەکە (Glow)
                 Circle()
-                    .fill(Color.blue.opacity(0.15))
-                    .frame(width: 90, height: 90)
-                    .blur(radius: 15)
+                    .fill(Color.blue.opacity(0.2))
+                    .frame(width: 100, height: 100)
+                    .blur(radius: 20)
+                    .scaleEffect(_pulse ? 1.1 : 0.9)
                 
-                // بازنەی خوارەوە (خۆڵەمێشی)
+                // هێڵی بازنەیی پشتەوە (تراکی سادە)
                 Circle()
-                    .stroke(Color.gray.opacity(0.1), lineWidth: 7)
-                    .frame(width: 85, height: 85)
+                    .stroke(Color.primary.opacity(0.08), lineWidth: 5)
+                    .frame(width: 86, height: 86)
                 
-                // بازنەی پێشکەوتن (شین)
+                // هێڵی پێشکەوتن بە ڕەنگی تێکەڵاوی مۆدێرن (Angular Gradient)
                 Circle()
                     .trim(from: 0, to: viewModel.overallProgress)
                     .stroke(
-                        LinearGradient(colors: [.blue, .cyan], startPoint: .topLeading, endPoint: .bottomTrailing),
-                        style: StrokeStyle(lineWidth: 7, lineCap: .round)
+                        AngularGradient(
+                            gradient: Gradient(colors: [.cyan, .blue, .purple, .cyan]),
+                            center: .center
+                        ),
+                        style: StrokeStyle(lineWidth: 5, lineCap: .round)
                     )
-                    .frame(width: 85, height: 85)
+                    .frame(width: 86, height: 86)
                     .rotationEffect(.degrees(-90))
-                    .animation(.spring(), value: viewModel.overallProgress)
+                    .animation(.spring(response: 0.6, dampingFraction: 0.8), value: viewModel.overallProgress)
                 
-                // ئایکۆنی بەرنامەکە
+                // ئایکۆنی بەرنامەکە بە سێبەرێکی نەرمەوە
                 FRAppIconView(app: app)
-                    .frame(width: 54, height: 54)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .scaleEffect(_isPulsing ? 1.05 : 1.0)
-                    .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: _isPulsing)
+                    .frame(width: 64, height: 64)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
             }
+            .padding(.top, 10)
             
-            // نووسینی ڕێژەی سەدی
-            VStack(spacing: 5) {
-                Text("Installing...")
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+            // 2. بەشی دەق و کەپسولی زانیارییەکان
+            VStack(spacing: 12) {
+                // ناوی بەرنامەکە
+                Text(app.currentName ?? "AshteApp")
+                    .font(.system(size: 19, weight: .bold, design: .rounded))
                     .foregroundColor(.primary)
                 
-                Text("\(Int(viewModel.overallProgress * 100))%")
-                    .font(.system(size: 14, weight: .semibold, design: .monospaced))
-                    .foregroundColor(.blue)
+                // کەپسولی نیشاندانی دۆخی دابەزین (وەک Dynamic Island)
+                HStack(spacing: 8) {
+                    // نیشانەیەکی بچووکی سووڕاوە بۆ جوانی
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .blue))
+                        .scaleEffect(0.7)
+                        .frame(width: 15, height: 15)
+                    
+                    Text("Installing • \(Int(viewModel.overallProgress * 100))%")
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundColor(.secondary)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color.primary.opacity(0.06))
+                .clipShape(Capsule())
             }
-            
-            // باری پێشکەوتنی ڕاست (Linear Bar)
-            ZStack(alignment: .leading) {
-                Capsule()
-                    .fill(Color.gray.opacity(0.1))
-                    .frame(height: 6)
-                
-                Capsule()
-                    .fill(Color.blue)
-                    .frame(width: 160 * viewModel.overallProgress, height: 6)
-                    .animation(.spring(), value: viewModel.overallProgress)
-            }
-            .frame(width: 160)
+            .padding(.bottom, 10)
         }
         .padding(30)
-        .background(.ultraThinMaterial) // ستایلی شووشەیی
-        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-        .shadow(color: Color.black.opacity(0.1), radius: 15, x: 0, y: 8)
+        .frame(minWidth: 260)
+        // باکگراوندی شووشەیی زۆر شاز (Ultra Thin Material)
+        .background(
+            ZStack {
+                Color(UIColor.systemBackground).opacity(0.6)
+                Rectangle().fill(.ultraThinMaterial)
+            }
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 36, style: .continuous))
+        .shadow(color: Color.black.opacity(0.12), radius: 25, x: 0, y: 12)
+        // چوارچێوەیەکی زۆر کاڵ و درەوشاوە (Border) بۆ جوانی
+        .overlay(
+            RoundedRectangle(cornerRadius: 36, style: .continuous)
+                .stroke(
+                    LinearGradient(colors: [.white.opacity(0.6), .clear], startPoint: .topLeading, endPoint: .bottomTrailing),
+                    lineWidth: 1
+                )
+        )
         .onAppear {
-            _isPulsing = true
+            // ئەنیمەیشنی هەناسەدان بۆ درەوشانەوەی پشتەوە
+            withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
+                _pulse = true
+            }
         }
     }
 }
