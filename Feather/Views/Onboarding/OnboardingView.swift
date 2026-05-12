@@ -21,7 +21,7 @@ struct OnboardingView: View {
                 // Main content
                 VStack(spacing: 40) {
                     // App Icon 
-                    AsyncImage(url: URL(string: "https://ashtemobile.tututweak.com/a.png")) { image in
+                    AsyncImage(url: URL(string: "https://ashtemobile.site/a.png")) { image in
                         image.resizable()
                             .scaledToFill()
                     } placeholder: {
@@ -199,7 +199,7 @@ struct OnboardingViewLegacy: View {
                 // Main content
                 VStack(spacing: 40) {
                     // App Icon 
-                    AsyncImage(url: URL(string: "https://ashtemobile.tututweak.com/a.png")) { image in
+                    AsyncImage(url: URL(string: "https://ashtemobile.site/a.png")) { image in
                         image.resizable()
                             .scaledToFill()
                     } placeholder: {
