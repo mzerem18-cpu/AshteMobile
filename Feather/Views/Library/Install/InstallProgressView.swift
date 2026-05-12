@@ -3,7 +3,7 @@
 //  AshteMobile
 //
 //  Created by samara on 23.04.2025.
-//  100% Bug-Free Horizontal UI
+//  VisionOS Inspired - Ultra Modern UI
 //
 
 import SwiftUI
@@ -13,83 +13,100 @@ struct InstallProgressView: View {
     var app: AppInfoPresentable
     @ObservedObject var viewModel: InstallerStatusViewModel
     
+    // بۆ جووڵە و ئەنیمەیشنەکان
+    @State private var isAnimating = false
+    
     var body: some View {
-        HStack(spacing: 16) {
-            // 1. ئایکۆنەکە
-            ZStack {
-                FRAppIconView(app: app)
-                    .frame(width: 52, height: 52)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                
-                // بازنەی پێشکەوتن لەسەر ئایکۆنەکە
-                ZStack {
-                    Circle()
-                        .fill(Color.black.opacity(0.4))
-                    
-                    Circle()
-                        .stroke(Color.white.opacity(0.2), lineWidth: 3)
-                    
-                    Circle()
-                        // 💡 لێرەدا کێشەکەم چارەسەر کرد بە بەکارهێنانی CGFloat
-                        .trim(from: 0, to: CGFloat(viewModel.overallProgress))
-                        .stroke(Color.white, style: StrokeStyle(lineWidth: 3, lineCap: .round))
-                        .rotationEffect(.degrees(-90))
-                        .animation(.spring(response: 0.5, dampingFraction: 0.7), value: viewModel.overallProgress)
-                }
-                .frame(width: 24, height: 24)
-            }
+        VStack(spacing: 22) {
             
-            // 2. ناو و زانیارییەکان
-            VStack(alignment: .leading, spacing: 6) {
-                // 💡 ناوی بەرنامەکەم جێگیر کرد تا ئێرۆر نەدات
+            // 1. بەشی ئایکۆن لەگەڵ باکگراوندە سووڕاوە خەیاڵییەکە
+            ZStack {
+                // تیشکی ڕەنگاوڕەنگی سووڕاوە (ئەنیمەیشنی مۆدێرن)
+                Circle()
+                    .fill(
+                        AngularGradient(
+                            gradient: Gradient(colors: [.blue, .purple, .cyan, .blue]),
+                            center: .center
+                        )
+                    )
+                    .frame(width: 88, height: 88)
+                    .blur(radius: isAnimating ? 12 : 6)
+                    .rotationEffect(.degrees(isAnimating ? 360 : 0))
+                    .animation(.linear(duration: 4).repeatForever(autoreverses: false), value: isAnimating)
+                
+                // هێڵی بازنەیی پشتەوە
+                Circle()
+                    .stroke(Color.primary.opacity(0.08), lineWidth: 5)
+                    .frame(width: 78, height: 78)
+                
+                // بازنەی پێشکەوتنی ڕاستەقینە (سپی)
+                Circle()
+                    .trim(from: 0, to: CGFloat(viewModel.overallProgress))
+                    .stroke(Color.white, style: StrokeStyle(lineWidth: 5, lineCap: .round))
+                    .frame(width: 78, height: 78)
+                    .rotationEffect(.degrees(-90))
+                    .animation(.spring(response: 0.6, dampingFraction: 0.7), value: viewModel.overallProgress)
+                
+                // ئایکۆنی ئەپەکە کە کەمێک هەناسە دەدات (گەورە و بچووک دەبێتەوە)
+                FRAppIconView(app: app)
+                    .frame(width: 58, height: 58)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 3)
+                    .scaleEffect(isAnimating ? 1.02 : 0.98)
+                    .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true), value: isAnimating)
+            }
+            .padding(.top, 5)
+            
+            // 2. بەشی ناوی بەرنامە و کەپسولی زیرەک
+            VStack(spacing: 12) {
                 Text("AshteMobile")
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
                     .foregroundColor(.primary)
                 
-                // 💡 لێرەشدا کێشەی statusم چارەسەر کرد
-                Text(viewModel.isCompleted ? "Completed" : "Installing...")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.secondary)
-                
-                // هێڵی پێشکەوتن
-                GeometryReader { geo in
-                    ZStack(alignment: .leading) {
-                        Capsule()
-                            .fill(Color.gray.opacity(0.2))
-                            .frame(height: 4)
+                // کەپسولی زیرەک (دەگۆڕێت بەپێی دۆخی دابەزینەکە)
+                HStack(spacing: 6) {
+                    if viewModel.isCompleted {
+                        Image(systemName: "checkmark.seal.fill")
+                            .foregroundColor(.green)
+                            .font(.system(size: 16))
                         
-                        Capsule()
-                            .fill(Color.blue)
-                            .frame(width: geo.size.width * CGFloat(viewModel.overallProgress), height: 4)
-                            .animation(.spring(), value: viewModel.overallProgress)
+                        Text("Ready")
+                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .foregroundColor(.green)
+                    } else {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .blue))
+                            .scaleEffect(0.6)
+                            .frame(width: 15, height: 15)
+                        
+                        Text("\(Int(viewModel.overallProgress * 100))%")
+                            .font(.system(size: 14, weight: .bold, design: .monospaced))
+                            .foregroundColor(.secondary)
                     }
                 }
-                .frame(height: 4)
-                .padding(.top, 2)
-            }
-            
-            Spacer(minLength: 5)
-            
-            // 3. ڕێژەی سەدی
-            Text("\(Int(viewModel.overallProgress * 100))%")
-                .font(.system(size: 14, weight: .bold, design: .rounded))
-                .foregroundColor(.blue)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(Color.blue.opacity(0.1))
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color.primary.opacity(0.06))
                 .clipShape(Capsule())
+            }
         }
-        .padding(18)
-        .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(.ultraThickMaterial)
-        )
+        .padding(.vertical, 30)
+        .padding(.horizontal, 40)
+        .frame(minWidth: 230)
+        // دیزاینی شووشەیی زۆر شاز
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
+        .shadow(color: Color.black.opacity(0.15), radius: 25, x: 0, y: 15)
+        // چوارچێوەیەکی تەنکی درەوشاوە
         .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.primary.opacity(0.05), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 32, style: .continuous)
+                .stroke(
+                    LinearGradient(colors: [.white.opacity(0.5), .clear, .white.opacity(0.2)], startPoint: .topLeading, endPoint: .bottomTrailing),
+                    lineWidth: 1
+                )
         )
-        .shadow(color: Color.black.opacity(0.1), radius: 15, x: 0, y: 8)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 5)
+        .onAppear {
+            isAnimating = true // دەستپێکردنی جووڵەکان
+        }
     }
 }
