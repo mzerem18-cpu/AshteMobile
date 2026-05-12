@@ -3,7 +3,7 @@
 //  AshteMobile
 //
 //  Created by samara on 23.04.2025.
-//  Apple Native Minimalist Style
+//  Dynamic Island Style - Minimalist & Modern UI
 //
 
 import SwiftUI
@@ -14,58 +14,70 @@ struct InstallProgressView: View {
     @ObservedObject var viewModel: InstallerStatusViewModel
     
     var body: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 15) {
             
-            // 1. ئایکۆنی ئەپەکە - بە سادەیی و جوانی
-            FRAppIconView(app: app)
-                .frame(width: 64, height: 64)
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
-            
-            // 2. زانیارییەکان و هێڵی پێشکەوتن
-            VStack(alignment: .leading, spacing: 8) {
+            // 1. ئایکۆنی بەرنامە بە شێوەی بازنەیی لەگەڵ هێڵی پێشکەوتن
+            ZStack {
+                // هێڵی پشتەوە (تراک)
+                Circle()
+                    .stroke(Color.primary.opacity(0.1), lineWidth: 3)
+                    .frame(width: 56, height: 56)
                 
-                // ناوی بەرنامە و ڕێژەی سەدی لە یەک هێڵدا
-                HStack {
-                    Text("AshteMobile")
-                        .font(.system(size: 18, weight: .bold, design: .rounded))
-                        .foregroundColor(.primary)
-                    
-                    Spacer()
-                    
-                    Text("\(Int(viewModel.overallProgress * 100))%")
-                        .font(.system(size: 14, weight: .bold, design: .monospaced))
-                        .foregroundColor(.blue)
-                }
+                // هێڵی پێشکەوتن (ڕەنگاوڕەنگ)
+                Circle()
+                    .trim(from: 0, to: CGFloat(viewModel.overallProgress))
+                    .stroke(
+                        LinearGradient(colors: [.cyan, .blue], startPoint: .topLeading, endPoint: .bottomTrailing),
+                        style: StrokeStyle(lineWidth: 3, lineCap: .round)
+                    )
+                    .frame(width: 56, height: 56)
+                    .rotationEffect(.degrees(-90))
+                    .animation(.spring(response: 0.5, dampingFraction: 0.8), value: viewModel.overallProgress)
                 
-                // دۆخی دابەزین
-                Text(viewModel.isCompleted ? "Ready to install" : "Sending Manifest...")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.secondary)
-                
-                // 3. هێڵی پێشکەوتن (Progress Bar)ی زۆر خاوێن
-                GeometryReader { geo in
-                    ZStack(alignment: .leading) {
-                        // باکگراوندی هێڵەکە
-                        Capsule()
-                            .fill(Color(UIColor.tertiarySystemFill))
-                        
-                        // هێڵی پڕبوونەوە بە ڕەنگی شین
-                        Capsule()
-                            .fill(Color.blue)
-                            .frame(width: geo.size.width * CGFloat(viewModel.overallProgress))
-                            .animation(.spring(response: 0.5, dampingFraction: 0.8), value: viewModel.overallProgress)
-                    }
-                }
-                .frame(height: 6)
+                // ئایکۆنی ئەپەکە
+                FRAppIconView(app: app)
+                    .frame(width: 44, height: 44)
+                    .clipShape(Circle())
+                    .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 2)
             }
+            
+            // 2. ناوی بەرنامە و دۆخی دابەزین
+            VStack(alignment: .leading, spacing: 4) {
+                Text("AshteMobile")
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundColor(.primary)
+                
+                Text(viewModel.isCompleted ? "Ready to open" : "Installing...")
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+            
+            // 3. باجی ڕێژەی سەدی (زۆر شاز و سەرنجڕاکێش)
+            Text("\(Int(viewModel.overallProgress * 100))%")
+                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .foregroundColor(.white)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(
+                    LinearGradient(colors: [.blue, .purple], startPoint: .leading, endPoint: .trailing)
+                )
+                .clipShape(Capsule())
+                .shadow(color: Color.blue.opacity(0.3), radius: 8, x: 0, y: 4)
         }
-        .padding(20)
-        // باکگراوندی کارتەکە کە لەگەڵ دۆخی تاريک و ڕووناکی مۆبایل دەگونجێت
-        .background(Color(UIColor.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .shadow(color: Color.black.opacity(0.08), radius: 15, x: 0, y: 8)
-        .padding(.horizontal, 24)
-        .padding(.vertical, 10)
+        .padding(16)
+        // باکگراوندی کەپسولی شووشەیی شاز
+        .background(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(.ultraThinMaterial)
+        )
+        // هێڵێکی زۆر تەنکی درەوشاوە بە دەوری کەپسولەکەدا
+        .overlay(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.15), radius: 25, x: 0, y: 10)
+        .padding(.horizontal, 20)
     }
 }
