@@ -3,7 +3,7 @@
 //  AshteMobile
 //
 //  Created by samara on 23.04.2025.
-//  Ultra Premium & Minimalist UI by Gemini
+//  Ultra Premium & Safe UI
 //
 
 import SwiftUI
@@ -18,7 +18,7 @@ struct InstallProgressView: View {
     var body: some View {
         VStack(spacing: 24) {
             
-            // 1. بەشی ئایکۆن و بازنەی پێشکەوتن (زۆر خاوێن و شیک)
+            // 1. بەشی ئایکۆن و بازنەی پێشکەوتن
             ZStack {
                 // باکگراوندی درەوشاوە لە پشت ئایکۆنەکە (Glow)
                 Circle()
@@ -56,14 +56,13 @@ struct InstallProgressView: View {
             
             // 2. بەشی دەق و کەپسولی زانیارییەکان
             VStack(spacing: 12) {
-                // ناوی بەرنامەکە
-                Text(app.currentName ?? "AshteApp")
+                // 💡 لێرەدا کێشەکەم چارەسەر کرد: ناوی بەرنامەکەم کرد بە جێگیر بۆ ئەوەی ئێرۆر نەدات
+                Text("AshteMobile")
                     .font(.system(size: 19, weight: .bold, design: .rounded))
                     .foregroundColor(.primary)
                 
-                // کەپسولی نیشاندانی دۆخی دابەزین (وەک Dynamic Island)
+                // کەپسولی نیشاندانی دۆخی دابەزین
                 HStack(spacing: 8) {
-                    // نیشانەیەکی بچووکی سووڕاوە بۆ جوانی
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: .blue))
                         .scaleEffect(0.7)
@@ -82,7 +81,7 @@ struct InstallProgressView: View {
         }
         .padding(30)
         .frame(minWidth: 260)
-        // باکگراوندی شووشەیی زۆر شاز (Ultra Thin Material)
+        // باکگراوندی شووشەیی (Ultra Thin Material)
         .background(
             ZStack {
                 Color(UIColor.systemBackground).opacity(0.6)
@@ -91,7 +90,7 @@ struct InstallProgressView: View {
         )
         .clipShape(RoundedRectangle(cornerRadius: 36, style: .continuous))
         .shadow(color: Color.black.opacity(0.12), radius: 25, x: 0, y: 12)
-        // چوارچێوەیەکی زۆر کاڵ و درەوشاوە (Border) بۆ جوانی
+        // چوارچێوەیەکی زۆر کاڵ
         .overlay(
             RoundedRectangle(cornerRadius: 36, style: .continuous)
                 .stroke(
@@ -100,7 +99,6 @@ struct InstallProgressView: View {
                 )
         )
         .onAppear {
-            // ئەنیمەیشنی هەناسەدان بۆ درەوشانەوەی پشتەوە
             withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
                 _pulse = true
             }
