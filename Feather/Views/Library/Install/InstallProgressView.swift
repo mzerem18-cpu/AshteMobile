@@ -3,7 +3,7 @@
 //  AshteMobile
 //
 //  Created by samara on 23.04.2025.
-//  Ksign-Inspired Transparent Sheet UI (Top Padding Fixed)
+//  Ksign-Inspired UI with "Open App" Button
 //
 
 import SwiftUI
@@ -25,11 +25,9 @@ struct InstallProgressView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                         .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
                     
-                    // ئەو پەردە تاریکەی سەر ئایکۆنەکە کە بەپێی دابەزین لا دەچێت
                     if !viewModel.isCompleted {
                         Rectangle()
                             .fill(Color.black.opacity(0.5))
-                            // پانییەکەی کەم دەبێتەوە کاتێک سەدییەکە زیاد دەکات
                             .frame(width: 70 * (1.0 - CGFloat(viewModel.overallProgress)))
                             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                             .animation(.spring(), value: viewModel.overallProgress)
@@ -46,7 +44,6 @@ struct InstallProgressView: View {
                         .font(.system(size: 15, weight: .bold))
                         .foregroundColor(.secondary)
                     
-                    // ئایکۆن و تێکستی دۆخەکە (پەیام ناردن یان تەواوبوون)
                     HStack(spacing: 4) {
                         Image(systemName: viewModel.isCompleted ? "checkmark.square.fill" : "paperplane.fill")
                             .font(.system(size: 12))
@@ -64,11 +61,9 @@ struct InstallProgressView: View {
             // 2. هێڵی پێشکەوتن (دەدرەوشێتەوە)
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
-                    // باکگراوندی هێڵەکە
                     Capsule()
                         .fill(Color.primary.opacity(0.08))
                     
-                    // هێڵە ڕەنگاوڕەنگەکە
                     Capsule()
                         .fill(
                             LinearGradient(
@@ -78,14 +73,13 @@ struct InstallProgressView: View {
                             )
                         )
                         .frame(width: geo.size.width * CGFloat(viewModel.overallProgress))
-                        // درەوشانەوە (Glow) بەپێی دۆخەکە
                         .shadow(color: viewModel.isCompleted ? Color.cyan.opacity(0.4) : Color.purple.opacity(0.4), radius: 6, x: 0, y: 0)
                         .animation(.spring(response: 0.5, dampingFraction: 0.8), value: viewModel.overallProgress)
                 }
             }
             .frame(height: 8)
             
-            // 3. بەشی خوارەوە: ڕێژەی سەدی و ڕێنمایی
+            // 3. بەشی ڕێژەی سەدی
             HStack {
                 Text("\(Int(viewModel.overallProgress * 100))%")
                     .font(.system(size: 22, weight: .heavy, design: .rounded))
@@ -97,10 +91,42 @@ struct InstallProgressView: View {
                     .font(.system(size: 13, weight: .medium, design: .rounded))
                     .foregroundColor(.secondary)
             }
+            
+            // 4. 💡 دوگمەی "Open App" کە تەنها کاتێک تەواو بوو دەردەکەوێت
+            if viewModel.isCompleted {
+                Button(action: {
+                    // لێرەدا دەتوانیت ئەکشنێک دابنێیت بۆ کردنەوەی ئەپەکە یان داخستنی پەردەکە
+                }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "app.badge.checkmark")
+                            .font(.system(size: 20, weight: .semibold))
+                        
+                        Text("Open App")
+                            .font(.system(size: 18, weight: .bold, design: .rounded))
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity) // بۆ ئەوەی درێژ بێت بە قەد شاشەکە
+                    .padding(.vertical, 16)
+                    .background(
+                        LinearGradient(
+                            colors: [.blue, .teal], // ڕەنگەکانی ڕێک وەک وێنەکە
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .shadow(color: Color.teal.opacity(0.4), radius: 8, x: 0, y: 4)
+                }
+                .padding(.top, 10)
+                // ئەنیمەیشن بۆ ئەوەی بە جوانی لە خوارەوە بێتە سەرەوە کاتێک دەردەکەوێت
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
+            }
         }
         .padding(.horizontal, 22)
-        .padding(.bottom, 45) 
-        // 💡 تەنها ئەم دێڕەم گۆڕیوە: بۆشایی سەرەوەم زیاد کرد بۆ ئەوەی لەو هێمایە دوور بکەوێتەوە
-        .padding(.top, 30) 
+        // 💡 بۆشایی خوارەوەم زیرەک کردووە: ئەگەر دوگمەکە دەرکەوت بۆشاییەکە کەم دەبێتەوە بۆ ئەوەی زۆر نەچێتە سەرەوە
+        .padding(.bottom, viewModel.isCompleted ? 20 : 45) 
+        .padding(.top, 30)
+        // ئەم ئەنیمەیشنە وا دەکات کاتێک دوگمەکە زیاد دەبێت، پەردەکە بە نەرمی گەورە بێت
+        .animation(.spring(response: 0.5, dampingFraction: 0.8), value: viewModel.isCompleted)
     }
 }
