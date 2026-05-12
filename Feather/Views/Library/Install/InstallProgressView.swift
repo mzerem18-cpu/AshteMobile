@@ -3,7 +3,7 @@
 //  AshteMobile
 //
 //  Created by samara on 23.04.2025.
-//  Dynamic Island Style - Minimalist & Modern UI
+//  Transparent Native Sheet Integration
 //
 
 import SwiftUI
@@ -14,70 +14,58 @@ struct InstallProgressView: View {
     @ObservedObject var viewModel: InstallerStatusViewModel
     
     var body: some View {
-        HStack(spacing: 15) {
+        HStack(spacing: 16) {
             
             // 1. ئایکۆنی بەرنامە بە شێوەی بازنەیی لەگەڵ هێڵی پێشکەوتن
             ZStack {
                 // هێڵی پشتەوە (تراک)
                 Circle()
                     .stroke(Color.primary.opacity(0.1), lineWidth: 3)
-                    .frame(width: 56, height: 56)
+                    .frame(width: 60, height: 60)
                 
-                // هێڵی پێشکەوتن (ڕەنگاوڕەنگ)
+                // هێڵی پێشکەوتن بە ڕەنگی شین
                 Circle()
                     .trim(from: 0, to: CGFloat(viewModel.overallProgress))
-                    .stroke(
-                        LinearGradient(colors: [.cyan, .blue], startPoint: .topLeading, endPoint: .bottomTrailing),
-                        style: StrokeStyle(lineWidth: 3, lineCap: .round)
-                    )
-                    .frame(width: 56, height: 56)
+                    .stroke(Color.blue, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                    .frame(width: 60, height: 60)
                     .rotationEffect(.degrees(-90))
                     .animation(.spring(response: 0.5, dampingFraction: 0.8), value: viewModel.overallProgress)
                 
                 // ئایکۆنی ئەپەکە
                 FRAppIconView(app: app)
-                    .frame(width: 44, height: 44)
+                    .frame(width: 48, height: 48)
                     .clipShape(Circle())
-                    .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 2)
             }
             
             // 2. ناوی بەرنامە و دۆخی دابەزین
             VStack(alignment: .leading, spacing: 4) {
                 Text("AshteMobile")
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
                     .foregroundColor(.primary)
                 
                 Text(viewModel.isCompleted ? "Ready to open" : "Installing...")
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
                     .foregroundColor(.secondary)
             }
             
             Spacer()
             
-            // 3. باجی ڕێژەی سەدی (زۆر شاز و سەرنجڕاکێش)
+            // 3. باجی ڕێژەی سەدی (سادە و مۆدێرن)
             Text("\(Int(viewModel.overallProgress * 100))%")
-                .font(.system(size: 13, weight: .bold, design: .rounded))
-                .foregroundColor(.white)
+                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .foregroundColor(viewModel.isCompleted ? .white : .blue)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
                 .background(
-                    LinearGradient(colors: [.blue, .purple], startPoint: .leading, endPoint: .trailing)
+                    viewModel.isCompleted ? Color.green : Color.blue.opacity(0.12)
                 )
                 .clipShape(Capsule())
-                .shadow(color: Color.blue.opacity(0.3), radius: 8, x: 0, y: 4)
         }
-        .padding(16)
-        // باکگراوندی کەپسولی شووشەیی شاز
-        .background(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(.ultraThinMaterial)
-        )
-        // هێڵێکی زۆر تەنکی درەوشاوە بە دەوری کەپسولەکەدا
-        .overlay(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(0.15), radius: 25, x: 0, y: 10)
         .padding(.horizontal, 20)
+        // 💡 تێبینی گرنگ: کەمێک بۆشاییم داوەتە خوارەوەی بۆ ئەوەی بەر وشەی Completed نەکەوێت
+        .padding(.bottom, 30) 
+        .padding(.top, 5)
+        
+        // 💡 هیچ Background و Shadow و Overlay لێرەدا نییە تا بە تەواوی شەفاف بێت!
     }
 }
