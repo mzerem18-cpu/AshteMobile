@@ -3,7 +3,7 @@
 //  AshteMobile
 //
 //  Created by samara on 23.04.2025.
-//  Ksign-Inspired Transparent Sheet UI (Top Padding Fixed)
+//  Ksign-Inspired Transparent Sheet UI
 //
 
 import SwiftUI
@@ -61,7 +61,7 @@ struct InstallProgressView: View {
                 Spacer()
             }
             
-            // 2. هێڵی پێشکەوتن (دەدرەوشێتەوە)
+            // 2. هێڵی پێشکەوتن (دەدرەوشێتەوە ڕێک وەک Ksign)
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     // باکگراوندی هێڵەکە
@@ -99,8 +99,9 @@ struct InstallProgressView: View {
             }
         }
         .padding(.horizontal, 22)
+        // 💡 تێبینی: بۆشاییەکی باشم داوەتە خوارەوەی بۆ ئەوەی قەت بەر دوگمەکانی خوارەوە نەکەوێت
         .padding(.bottom, 45) 
-        // 💡 تەنها ئەم دێڕەم گۆڕیوە: بۆشایی سەرەوەم زیاد کرد بۆ ئەوەی لەو هێمایە دوور بکەوێتەوە
-        .padding(.top, 30) 
+        .padding(.top, 10)
+        // 💡 هیچ باکگراوندێکی ڕەشمان دانەناوە، بۆیە سەد لە سەد شەفافە و تێکەڵی پەردەکە دەبێت!
     }
 }
