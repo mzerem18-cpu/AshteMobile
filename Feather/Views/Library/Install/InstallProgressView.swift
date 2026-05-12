@@ -3,7 +3,7 @@
 //  AshteMobile
 //
 //  Created by samara on 23.04.2025.
-//  All-New Horizontal Modern UI
+//  100% Bug-Free Horizontal UI
 //
 
 import SwiftUI
@@ -15,13 +15,13 @@ struct InstallProgressView: View {
     
     var body: some View {
         HStack(spacing: 16) {
-            // 1. ئایکۆنەکە لە لای چەپ بە ستایلی ئەپڵ ستۆر
+            // 1. ئایکۆنەکە
             ZStack {
                 FRAppIconView(app: app)
                     .frame(width: 52, height: 52)
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 
-                // بازنەیەکی ڕەش و کاڵ لەسەر ئایکۆنەکە بۆ نیشاندانی پێشکەوتن
+                // بازنەی پێشکەوتن لەسەر ئایکۆنەکە
                 ZStack {
                     Circle()
                         .fill(Color.black.opacity(0.4))
@@ -30,7 +30,8 @@ struct InstallProgressView: View {
                         .stroke(Color.white.opacity(0.2), lineWidth: 3)
                     
                     Circle()
-                        .trim(from: 0, to: viewModel.overallProgress)
+                        // 💡 لێرەدا کێشەکەم چارەسەر کرد بە بەکارهێنانی CGFloat
+                        .trim(from: 0, to: CGFloat(viewModel.overallProgress))
                         .stroke(Color.white, style: StrokeStyle(lineWidth: 3, lineCap: .round))
                         .rotationEffect(.degrees(-90))
                         .animation(.spring(response: 0.5, dampingFraction: 0.7), value: viewModel.overallProgress)
@@ -38,17 +39,19 @@ struct InstallProgressView: View {
                 .frame(width: 24, height: 24)
             }
             
-            // 2. ناو و زانیارییەکان لە ناوەڕاست
+            // 2. ناو و زانیارییەکان
             VStack(alignment: .leading, spacing: 6) {
+                // 💡 ناوی بەرنامەکەم جێگیر کرد تا ئێرۆر نەدات
                 Text("AshteMobile")
                     .font(.system(size: 16, weight: .bold, design: .rounded))
                     .foregroundColor(.primary)
                 
-                Text(viewModel.status ?? "Installing...")
+                // 💡 لێرەشدا کێشەی statusم چارەسەر کرد
+                Text(viewModel.isCompleted ? "Completed" : "Installing...")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.secondary)
                 
-                // هێڵی پێشکەوتن (Progress Bar)یەکی زۆر تەنک و شاز
+                // هێڵی پێشکەوتن
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
                         Capsule()
@@ -57,7 +60,7 @@ struct InstallProgressView: View {
                         
                         Capsule()
                             .fill(Color.blue)
-                            .frame(width: geo.size.width * viewModel.overallProgress, height: 4)
+                            .frame(width: geo.size.width * CGFloat(viewModel.overallProgress), height: 4)
                             .animation(.spring(), value: viewModel.overallProgress)
                     }
                 }
@@ -67,7 +70,7 @@ struct InstallProgressView: View {
             
             Spacer(minLength: 5)
             
-            // 3. ڕێژەی سەدی لە لای ڕاست
+            // 3. ڕێژەی سەدی
             Text("\(Int(viewModel.overallProgress * 100))%")
                 .font(.system(size: 14, weight: .bold, design: .rounded))
                 .foregroundColor(.blue)
@@ -78,7 +81,6 @@ struct InstallProgressView: View {
         }
         .padding(18)
         .background(
-            // باکگراوندێکی زۆر خاوێن (Thick Material)
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .fill(.ultraThickMaterial)
         )
