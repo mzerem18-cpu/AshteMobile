@@ -3,7 +3,7 @@
 //  AshteMobile
 //
 //  Created by samara on 23.04.2025.
-//  Transparent Native Sheet Integration
+//  Ksign-Inspired Transparent Sheet UI
 //
 
 import SwiftUI
@@ -14,58 +14,94 @@ struct InstallProgressView: View {
     @ObservedObject var viewModel: InstallerStatusViewModel
     
     var body: some View {
-        HStack(spacing: 16) {
+        VStack(spacing: 20) {
             
-            // 1. ئایکۆنی بەرنامە بە شێوەی بازنەیی لەگەڵ هێڵی پێشکەوتن
-            ZStack {
-                // هێڵی پشتەوە (تراک)
-                Circle()
-                    .stroke(Color.primary.opacity(0.1), lineWidth: 3)
-                    .frame(width: 60, height: 60)
+            // 1. بەشی سەرەوە: ئایکۆن و زانیارییەکان
+            HStack(spacing: 16) {
+                // ئایکۆنی ئەپەکە لەگەڵ ئیفێکتی تاریکبوون
+                ZStack(alignment: .trailing) {
+                    FRAppIconView(app: app)
+                        .frame(width: 70, height: 70)
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+                    
+                    // ئەو پەردە تاریکەی سەر ئایکۆنەکە کە بەپێی دابەزین لا دەچێت
+                    if !viewModel.isCompleted {
+                        Rectangle()
+                            .fill(Color.black.opacity(0.5))
+                            // پانییەکەی کەم دەبێتەوە کاتێک سەدییەکە زیاد دەکات
+                            .frame(width: 70 * (1.0 - CGFloat(viewModel.overallProgress)))
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .animation(.spring(), value: viewModel.overallProgress)
+                    }
+                }
                 
-                // هێڵی پێشکەوتن بە ڕەنگی شین
-                Circle()
-                    .trim(from: 0, to: CGFloat(viewModel.overallProgress))
-                    .stroke(Color.blue, style: StrokeStyle(lineWidth: 3, lineCap: .round))
-                    .frame(width: 60, height: 60)
-                    .rotationEffect(.degrees(-90))
-                    .animation(.spring(response: 0.5, dampingFraction: 0.8), value: viewModel.overallProgress)
+                // ناو و دۆخی بەرنامەکە
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(viewModel.isCompleted ? "Install Complete" : "Preparing Install")
+                        .font(.system(size: 20, weight: .heavy, design: .rounded))
+                        .foregroundColor(.primary)
+                    
+                    Text("AshteMobile")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundColor(.secondary)
+                    
+                    // ئایکۆن و تێکستی دۆخەکە (پەیام ناردن یان تەواوبوون)
+                    HStack(spacing: 4) {
+                        Image(systemName: viewModel.isCompleted ? "checkmark.square.fill" : "paperplane.fill")
+                            .font(.system(size: 12))
+                        
+                        Text(viewModel.isCompleted ? "Completed" : "Sending Manifest")
+                            .font(.system(size: 13, weight: .bold))
+                    }
+                    .foregroundColor(viewModel.isCompleted ? .teal : .orange)
+                    .padding(.top, 2)
+                }
                 
-                // ئایکۆنی ئەپەکە
-                FRAppIconView(app: app)
-                    .frame(width: 48, height: 48)
-                    .clipShape(Circle())
+                Spacer()
             }
             
-            // 2. ناوی بەرنامە و دۆخی دابەزین
-            VStack(alignment: .leading, spacing: 4) {
-                Text("AshteMobile")
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
-                    .foregroundColor(.primary)
+            // 2. هێڵی پێشکەوتن (دەدرەوشێتەوە ڕێک وەک Ksign)
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    // باکگراوندی هێڵەکە
+                    Capsule()
+                        .fill(Color.primary.opacity(0.08))
+                    
+                    // هێڵە ڕەنگاوڕەنگەکە
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: viewModel.isCompleted ? [.blue, .cyan] : [.orange, .purple],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .frame(width: geo.size.width * CGFloat(viewModel.overallProgress))
+                        // درەوشانەوە (Glow) بەپێی دۆخەکە
+                        .shadow(color: viewModel.isCompleted ? Color.cyan.opacity(0.4) : Color.purple.opacity(0.4), radius: 6, x: 0, y: 0)
+                        .animation(.spring(response: 0.5, dampingFraction: 0.8), value: viewModel.overallProgress)
+                }
+            }
+            .frame(height: 8)
+            
+            // 3. بەشی خوارەوە: ڕێژەی سەدی و ڕێنمایی
+            HStack {
+                Text("\(Int(viewModel.overallProgress * 100))%")
+                    .font(.system(size: 22, weight: .heavy, design: .rounded))
+                    .foregroundColor(viewModel.isCompleted ? .teal : .orange)
                 
-                Text(viewModel.isCompleted ? "Ready to open" : "Installing...")
-                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                Spacer()
+                
+                Text(viewModel.isCompleted ? "Ready to open" : "Keep AshteMobile open")
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
                     .foregroundColor(.secondary)
             }
-            
-            Spacer()
-            
-            // 3. باجی ڕێژەی سەدی (سادە و مۆدێرن)
-            Text("\(Int(viewModel.overallProgress * 100))%")
-                .font(.system(size: 14, weight: .bold, design: .rounded))
-                .foregroundColor(viewModel.isCompleted ? .white : .blue)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .background(
-                    viewModel.isCompleted ? Color.green : Color.blue.opacity(0.12)
-                )
-                .clipShape(Capsule())
         }
-        .padding(.horizontal, 20)
-        // 💡 تێبینی گرنگ: کەمێک بۆشاییم داوەتە خوارەوەی بۆ ئەوەی بەر وشەی Completed نەکەوێت
-        .padding(.bottom, 30) 
-        .padding(.top, 5)
-        
-        // 💡 هیچ Background و Shadow و Overlay لێرەدا نییە تا بە تەواوی شەفاف بێت!
+        .padding(.horizontal, 22)
+        // 💡 تێبینی: بۆشاییەکی باشم داوەتە خوارەوەی بۆ ئەوەی قەت بەر دوگمەکانی خوارەوە نەکەوێت
+        .padding(.bottom, 45) 
+        .padding(.top, 10)
+        // 💡 هیچ باکگراوندێکی ڕەشمان دانەناوە، بۆیە سەد لە سەد شەفافە و تێکەڵی پەردەکە دەبێت!
     }
 }
