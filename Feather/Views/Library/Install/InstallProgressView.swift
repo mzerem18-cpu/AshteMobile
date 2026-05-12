@@ -3,7 +3,7 @@
 //  AshteMobile
 //
 //  Created by samara on 23.04.2025.
-//  Ksign-Inspired UI with "Open App" Button
+//  Ksign-Inspired UI (With Expanded Sheet Frame)
 //
 
 import SwiftUI
@@ -92,7 +92,7 @@ struct InstallProgressView: View {
                     .foregroundColor(.secondary)
             }
             
-            // 4. 💡 دوگمەی "Open App" کە تەنها کاتێک تەواو بوو دەردەکەوێت
+            // 4. دوگمەی "Open App" کە تەنها کاتێک تەواو بوو دەردەکەوێت
             if viewModel.isCompleted {
                 Button(action: {
                     // لێرەدا دەتوانیت ئەکشنێک دابنێیت بۆ کردنەوەی ئەپەکە یان داخستنی پەردەکە
@@ -105,11 +105,11 @@ struct InstallProgressView: View {
                             .font(.system(size: 18, weight: .bold, design: .rounded))
                     }
                     .foregroundColor(.white)
-                    .frame(maxWidth: .infinity) // بۆ ئەوەی درێژ بێت بە قەد شاشەکە
+                    .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
                     .background(
                         LinearGradient(
-                            colors: [.blue, .teal], // ڕەنگەکانی ڕێک وەک وێنەکە
+                            colors: [.blue, .teal], 
                             startPoint: .leading,
                             endPoint: .trailing
                         )
@@ -118,15 +118,13 @@ struct InstallProgressView: View {
                     .shadow(color: Color.teal.opacity(0.4), radius: 8, x: 0, y: 4)
                 }
                 .padding(.top, 10)
-                // ئەنیمەیشن بۆ ئەوەی بە جوانی لە خوارەوە بێتە سەرەوە کاتێک دەردەکەوێت
                 .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
         }
         .padding(.horizontal, 22)
-        // 💡 بۆشایی خوارەوەم زیرەک کردووە: ئەگەر دوگمەکە دەرکەوت بۆشاییەکە کەم دەبێتەوە بۆ ئەوەی زۆر نەچێتە سەرەوە
-        .padding(.bottom, viewModel.isCompleted ? 20 : 45) 
-        .padding(.top, 30)
-        // ئەم ئەنیمەیشنە وا دەکات کاتێک دوگمەکە زیاد دەبێت، پەردەکە بە نەرمی گەورە بێت
+        .padding(.vertical, 20)
+        // 💡 تێبینی گرنگ: ئەم دێڕە وا دەکات پەردەکە بە زۆر خۆی گەورە بکات بۆ ئەوەی دیزاینەکە جێی ببێتەوە
+        .frame(minHeight: viewModel.isCompleted ? 280 : 220, alignment: .top)
         .animation(.spring(response: 0.5, dampingFraction: 0.8), value: viewModel.isCompleted)
     }
 }
