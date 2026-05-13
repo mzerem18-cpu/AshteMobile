@@ -13,20 +13,14 @@ struct RemoteApp: Codable, Identifiable {
     
     var id: String { name } 
     
-    var description: String? {
-        return hack?.joined(separator: "\n")
-    }
-    
-    var fullIconURL: URL? {
+    var safeIconURL: URL? {
         guard let path = iconURL else { return nil }
-        let safePath = path.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? path
-        return URL(string: "https://ashtemobile.site/\(safePath)")
+        return URL(string: "https://ashtemobile.site/\(path.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? path)")
     }
     
-    var fullBannerURL: URL? {
+    var safeBannerURL: URL? {
         guard let path = bannerURL else { return nil }
-        let safePath = path.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? path
-        return URL(string: "https://ashtemobile.site/\(safePath)")
+        return URL(string: "https://ashtemobile.site/\(path.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? path)")
     }
     
     var actualDownloadURL: URL? {
@@ -47,14 +41,8 @@ struct RemoteApp: Codable, Identifiable {
     }
     
     enum CodingKeys: String, CodingKey {
-        case name = "name"
-        case version = "version"
-        case iconURL = "image"
-        case bannerURL = "banner"
-        case category = "category"
-        case downloadURL = "url"
-        case size = "size"
-        case status = "status"
-        case hack = "hack"
+        case name = "name", version = "version", iconURL = "image"
+        case bannerURL = "banner", category = "category", downloadURL = "url"
+        case size = "size", status = "status", hack = "hack"
     }
 }
