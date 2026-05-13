@@ -19,12 +19,21 @@ struct RemoteApp: Codable, Identifiable {
         return URL(string: "https://ashtemobile.site/\(path)")
     }
     
-    // 🔥 چارەسەری کێشەکە: ئەمە کۆدی Base64 دەکاتەوە بە لینکی ڕاستەقینەی داونلۆد
+    // 🔥 چارەسەری کۆتایی بۆ لینکەکان (بۆشایی و کێشەی Base64 چارەسەر دەکات)
     var actualDownloadURL: URL? {
-        if let data = Data(base64Encoded: downloadURL),
-           let decodedString = String(data: data, encoding: .utf8),
-           let url = URL(string: decodedString) {
-            return url
+        let cleanStr = downloadURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        var base64Data = Data(base64Encoded: cleanStr, options: .ignoreUnknownCharacters)
+        
+        // ئەگەر کۆدەکە کەمایەسی هەبوو چاکی دەکاتەوە
+        if base64Data == nil {
+            let padded = cleanStr.padding(toLength: ((cleanStr.count + 3) / 4) * 4, withPad: "=", startingAt: 0)
+            base64Data = Data(base64Encoded: padded, options: .ignoreUnknownCharacters)
+        }
+        
+        if let data = base64Data, let decoded = String(data: data, encoding: .utf8) {
+            // ئەمە بۆشایی ناو لینکەکان چارەسەر دەکات (وەک Pirate Ships)
+            let safeURLString = decoded.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? decoded
+            return URL(string: safeURLString)
         }
         return URL(string: downloadURL)
     }
