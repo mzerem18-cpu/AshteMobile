@@ -6,7 +6,7 @@ struct RemoteApp: Codable, Identifiable {
     let name: String
     let version: String?
     let iconURL: String?
-    let downloadURL: String
+    let downloadURL: String? // 💡 چارەسەری ئێرۆری JSON (ئێستا کراش ناکات ئەگەر لینکەکەش نەبێت)
     let size: String?
     let hack: [String]? 
     
@@ -19,23 +19,21 @@ struct RemoteApp: Codable, Identifiable {
         return URL(string: "https://ashtemobile.site/\(path)")
     }
     
-    // 🔥 چارەسەری کۆتایی بۆ لینکەکان (بۆشایی و کێشەی Base64 چارەسەر دەکات)
     var actualDownloadURL: URL? {
-        let cleanStr = downloadURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let dl = downloadURL else { return nil }
+        let cleanStr = dl.trimmingCharacters(in: .whitespacesAndNewlines)
         var base64Data = Data(base64Encoded: cleanStr, options: .ignoreUnknownCharacters)
         
-        // ئەگەر کۆدەکە کەمایەسی هەبوو چاکی دەکاتەوە
         if base64Data == nil {
             let padded = cleanStr.padding(toLength: ((cleanStr.count + 3) / 4) * 4, withPad: "=", startingAt: 0)
             base64Data = Data(base64Encoded: padded, options: .ignoreUnknownCharacters)
         }
         
         if let data = base64Data, let decoded = String(data: data, encoding: .utf8) {
-            // ئەمە بۆشایی ناو لینکەکان چارەسەر دەکات (وەک Pirate Ships)
             let safeURLString = decoded.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? decoded
             return URL(string: safeURLString)
         }
-        return URL(string: downloadURL)
+        return URL(string: dl)
     }
     
     enum CodingKeys: String, CodingKey {
