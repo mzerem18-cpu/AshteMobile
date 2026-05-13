@@ -2,15 +2,18 @@
 //  HomeView.swift
 //  AshteMobile
 //
+//  Modern Public UI Version
+//
 
 import SwiftUI
 import NimbleViews
 import Foundation
 import UIKit
 
-// MARK: - Models
+// MARK: - Model
 
 struct HomeApp: Codable, Identifiable {
+
     var id: String { url }
 
     let name: String
@@ -26,6 +29,7 @@ struct HomeApp: Codable, Identifiable {
     let hack: [String]?
 
     var fullImageURL: URL? {
+
         guard let img = image else { return nil }
 
         if img.hasPrefix("http") {
@@ -33,18 +37,6 @@ struct HomeApp: Codable, Identifiable {
         }
 
         return URL(string: "https://ashtemobile.site/\(img)")
-    }
-
-    var fullBannerURL: URL? {
-        if let ban = banner {
-            if ban.hasPrefix("http") {
-                return URL(string: ban)
-            }
-
-            return URL(string: "https://ashtemobile.site/\(ban)")
-        }
-
-        return fullImageURL
     }
 }
 
@@ -71,7 +63,10 @@ struct HomeView: View {
         in: .common
     ).autoconnect()
 
+    // MARK: Categories
+
     var groupedApps: [(String, [HomeApp])] {
+
         let dict = Dictionary(
             grouping: apps,
             by: { $0.category ?? "Apps" }
@@ -80,11 +75,13 @@ struct HomeView: View {
         return dict.sorted { $0.key < $1.key }
     }
 
+    // MARK: UI
+
     var body: some View {
 
         ZStack {
 
-            // MARK: Background
+            // Background
 
             LinearGradient(
                 colors: [
@@ -103,7 +100,7 @@ struct HomeView: View {
 
                     VStack(spacing: 35) {
 
-                        // MARK: Banner
+                        // MARK: Banner Slider
 
                         TabView(selection: $currentBanner) {
 
@@ -111,9 +108,7 @@ struct HomeView: View {
 
                                 Button {
 
-                                    if index < myCustomLinks.count,
-                                       let url = URL(string: myCustomLinks[index]) {
-
+                                    if let url = URL(string: myCustomLinks[index]) {
                                         UIApplication.shared.open(url)
                                     }
 
@@ -130,16 +125,14 @@ struct HomeView: View {
                                     } placeholder: {
 
                                         RoundedRectangle(cornerRadius: 28)
-                                            .fill(Color.white.opacity(0.08))
+                                            .fill(Color.gray.opacity(0.2))
                                     }
                                 }
                                 .buttonStyle(.plain)
                                 .tag(index)
                             }
                         }
-                        .frame(
-                            height: (UIScreen.main.bounds.width - 40) * 0.56
-                        )
+                        .frame(height: 210)
                         .clipShape(
                             RoundedRectangle(
                                 cornerRadius: 28,
@@ -149,21 +142,23 @@ struct HomeView: View {
                         .overlay(
                             RoundedRectangle(cornerRadius: 28)
                                 .stroke(
-                                    Color.white.opacity(0.12),
+                                    Color.white.opacity(0.1),
                                     lineWidth: 1
                                 )
                         )
                         .shadow(
-                            color: .black.opacity(0.15),
-                            radius: 20,
+                            color: .black.opacity(0.12),
+                            radius: 10,
                             x: 0,
-                            y: 10
+                            y: 6
                         )
                         .padding(.horizontal, 20)
-                        .tabViewStyle(.page(indexDisplayMode: .automatic))
+                        .tabViewStyle(
+                            PageTabViewStyle(indexDisplayMode: .automatic)
+                        )
                         .onReceive(timer) { _ in
 
-                            withAnimation(.easeInOut(duration: 0.5)) {
+                            withAnimation {
 
                                 currentBanner =
                                 (currentBanner + 1)
@@ -173,22 +168,22 @@ struct HomeView: View {
 
                         // MARK: Categories
 
-                        VStack(alignment: .leading, spacing: 35) {
+                        VStack(alignment: .leading, spacing: 30) {
 
                             ForEach(groupedApps, id: \.0) { category, categoryApps in
 
-                                VStack(alignment: .leading, spacing: 18) {
+                                VStack(alignment: .leading, spacing: 16) {
 
                                     HStack {
 
                                         Text(category)
-                                            .font(.largeTitle.bold())
+                                            .font(.title.bold())
 
                                         Spacer()
 
                                         Text("See All")
-                                            .font(.headline)
                                             .foregroundColor(.blue)
+                                            .fontWeight(.semibold)
                                     }
                                     .padding(.horizontal, 20)
 
@@ -201,11 +196,23 @@ struct HomeView: View {
 
                                             ForEach(categoryApps) { app in
 
-                                                Link(
-                                                    destination: URL(
+                                                Button {
+
+                                                    let generator =
+                                                    UIImpactFeedbackGenerator(
+                                                        style: .medium
+                                                    )
+
+                                                    generator.impactOccurred()
+
+                                                    if let url = URL(
                                                         string: app.url
-                                                    )!
-                                                ) {
+                                                    ) {
+
+                                                        UIApplication.shared.open(url)
+                                                    }
+
+                                                } label: {
 
                                                     HomeAppCardView(app: app)
                                                 }
@@ -229,6 +236,7 @@ struct HomeView: View {
             }
         }
         .task {
+
             await loadApps()
         }
     }
@@ -258,6 +266,7 @@ struct HomeView: View {
             )
 
             await MainActor.run {
+
                 self.apps = decoded
             }
 
@@ -276,7 +285,9 @@ struct HomeAppCardView: View {
 
     var body: some View {
 
-        VStack(spacing: 14) {
+        VStack(spacing: 12) {
+
+            // App Image
 
             AsyncImage(url: app.fullImageURL) { image in
 
@@ -286,29 +297,24 @@ struct HomeAppCardView: View {
 
             } placeholder: {
 
-                RoundedRectangle(cornerRadius: 22)
-                    .fill(Color.white.opacity(0.08))
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color.gray.opacity(0.2))
             }
-            .frame(width: 84, height: 84)
+            .frame(width: 80, height: 80)
             .clipShape(
                 RoundedRectangle(
-                    cornerRadius: 22,
+                    cornerRadius: 20,
                     style: .continuous
                 )
             )
-            .overlay(
-                RoundedRectangle(cornerRadius: 22)
-                    .stroke(
-                        Color.white.opacity(0.12),
-                        lineWidth: 1
-                    )
-            )
             .shadow(
-                color: .black.opacity(0.12),
-                radius: 12,
+                color: .black.opacity(0.1),
+                radius: 8,
                 x: 0,
-                y: 6
+                y: 4
             )
+
+            // App Info
 
             VStack(spacing: 4) {
 
@@ -324,29 +330,35 @@ struct HomeAppCardView: View {
 
             Spacer()
 
-            Text("OPEN")
-                .font(.system(size: 13, weight: .bold))
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 34)
-                .background(
+            // OPEN Button
 
-                    LinearGradient(
-                        colors: [
-                            .blue,
-                            .purple
-                        ],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
+            HStack(spacing: 5) {
+
+                Image(systemName: "arrow.down.circle.fill")
+
+                Text("OPEN")
+            }
+            .font(.system(size: 13, weight: .bold))
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .frame(height: 34)
+            .background(
+
+                LinearGradient(
+                    colors: [.blue, .purple],
+                    startPoint: .leading,
+                    endPoint: .trailing
                 )
-                .clipShape(Capsule())
+            )
+            .clipShape(Capsule())
         }
-        .padding(16)
-        .frame(width: 150, height: 215)
+        .padding(15)
+        .frame(width: 135, height: 200)
         .background(
-            .ultraThinMaterial,
-            in: RoundedRectangle(
+            Color(.secondarySystemBackground)
+        )
+        .clipShape(
+            RoundedRectangle(
                 cornerRadius: 28,
                 style: .continuous
             )
@@ -354,15 +366,15 @@ struct HomeAppCardView: View {
         .overlay(
             RoundedRectangle(cornerRadius: 28)
                 .stroke(
-                    Color.white.opacity(0.10),
+                    Color.white.opacity(0.08),
                     lineWidth: 1
                 )
         )
         .shadow(
-            color: .black.opacity(0.12),
-            radius: 16,
+            color: .black.opacity(0.08),
+            radius: 8,
             x: 0,
-            y: 10
+            y: 4
         )
     }
 }
@@ -373,10 +385,10 @@ struct SocialMediaFooter: View {
 
     var body: some View {
 
-        VStack(spacing: 22) {
+        VStack(spacing: 20) {
 
             Text("Connect With Us")
-                .font(.title2.bold())
+                .font(.title3.bold())
 
             HStack(spacing: 24) {
 
@@ -399,21 +411,16 @@ struct SocialMediaFooter: View {
                 )
             }
         }
-        .padding(.vertical, 26)
+        .padding(.vertical, 25)
         .frame(maxWidth: .infinity)
-        .background(.ultraThinMaterial)
+        .background(
+            Color(.secondarySystemBackground)
+        )
         .clipShape(
             RoundedRectangle(
                 cornerRadius: 28,
                 style: .continuous
             )
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 28)
-                .stroke(
-                    Color.white.opacity(0.1),
-                    lineWidth: 1
-                )
         )
         .padding(.horizontal, 20)
     }
@@ -432,29 +439,30 @@ struct SocialButton: View {
         Button {
 
             if let link = URL(string: url) {
+
                 UIApplication.shared.open(link)
             }
 
         } label: {
 
             Image(systemName: icon)
-                .font(.system(size: 22, weight: .bold))
+                .font(.system(size: 20, weight: .bold))
                 .foregroundColor(.white)
-                .frame(width: 56, height: 56)
+                .frame(width: 55, height: 55)
                 .background(color)
                 .clipShape(Circle())
                 .shadow(
-                    color: color.opacity(0.4),
-                    radius: 10,
+                    color: color.opacity(0.3),
+                    radius: 6,
                     x: 0,
-                    y: 5
+                    y: 4
                 )
         }
         .buttonStyle(ScaleButtonStyle())
     }
 }
 
-// MARK: - Scale Animation
+// MARK: - Animation
 
 struct ScaleButtonStyle: ButtonStyle {
 
