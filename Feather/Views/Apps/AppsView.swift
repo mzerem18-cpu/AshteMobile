@@ -1,6 +1,6 @@
 import SwiftUI
 import CoreData
-import Foundation
+import Combine
 
 struct AppsView: View {
     @StateObject private var viewModel = AppsViewModel()
@@ -35,17 +35,52 @@ struct AppsView: View {
 struct AppRowView: View {
     var app: RemoteApp
     
-    // کۆنترۆڵکەری داونلۆد کە قەبارە (MB) دەخوێنێتەوە
-    @StateObject private var downloader = AppDownloader()
+    // بەکارهێنانی مەنەجەرە ئەسڵییەکەی بەرنامەکەی خۆت
+    @ObservedObject var downloadManager = DownloadManager.shared
+    @State private var currentDownload: Download? = nil
     @State private var isSigning = false
-    @State private var signingProgress = 0.0
     
-    // هێنانی شەهادەکان لەناو داتابەیس
+    // زانیارییەکانی داونلۆد
+    @State private var progress: Double = 0
+    @State private var bytesDownloaded: Int64 = 0
+    @State private var totalBytes: Int64 = 0
+    @State private var unpackageProgress: Double = 0
+    
+    // تایمەرێک بۆ خوێندنەوەی بەردەوامی داونلۆدەکە بێ ئێرۆر
+    let timer = Timer.publish(every: 0.2, on: .main, in: .common).autoconnect()
+    
+    // هێنانی ئەپە داونلۆدکراوە ئەسڵییەکانی ناو Library
+    @FetchRequest(
+        entity: Imported.entity(),
+        sortDescriptors: [NSSortDescriptor(keyPath: \Imported.date, ascending: false)],
+        animation: .snappy
+    ) private var importedApps: FetchedResults<Imported>
+    
     @FetchRequest(
         entity: CertificatePair.entity(),
         sortDescriptors: [NSSortDescriptor(keyPath: \CertificatePair.date, ascending: false)],
         animation: .snappy
     ) private var certificates: FetchedResults<CertificatePair>
+
+    // هاوکێشەی ئەسڵی بەرنامەکەت بۆ ڕێژەی داونلۆد
+    var overallProgress: Double {
+        if let dl = currentDownload {
+            return dl.onlyArchiving ? unpackageProgress : (0.3 * unpackageProgress) + (0.7 * progress)
+        }
+        return 0
+    }
+
+    var statusText: String {
+        if totalBytes > 0 {
+            let mbDownloaded = Double(bytesDownloaded) / 1048576.0
+            let mbTotal = Double(totalBytes) / 1048576.0
+            return String(format: "%.1f MB / %.1f MB", mbDownloaded, mbTotal)
+        } else if bytesDownloaded > 0 {
+            let mbDownloaded = Double(bytesDownloaded) / 1048576.0
+            return String(format: "%.1f MB", mbDownloaded)
+        }
+        return "Starting..."
+    }
 
     var body: some View {
         HStack(spacing: 15) {
@@ -60,11 +95,11 @@ struct AppRowView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(app.name).font(.system(size: 16, weight: .bold))
                 
-                // لێرەدا ڕاستەوخۆ مێگابایتەکانی داونلۆد نیشان دەدات!
-                if downloader.isDownloading {
-                    Text(downloader.statusText)
+                if currentDownload != nil {
+                    Text(statusText)
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(.blue)
+                        .contentTransition(.numericText())
                 } else if isSigning {
                     Text("Signing...")
                         .font(.system(size: 11, weight: .semibold))
@@ -79,22 +114,22 @@ struct AppRowView: View {
             Spacer()
             
             Button(action: {
-                if !downloader.isDownloading && !isSigning {
-                    startProcess()
+                if currentDownload == nil && !isSigning {
+                    startNativeDownloadAndSign()
                 }
             }) {
                 ZStack {
-                    if downloader.isDownloading || isSigning {
+                    if currentDownload != nil || isSigning {
                         Circle()
                             .stroke(Color.gray.opacity(0.2), lineWidth: 3)
                             .frame(width: 28, height: 28)
                         
                         Circle()
-                            // ڕەنگی شین بۆ داونلۆد، ڕەنگی پرتەقاڵی بۆ Sign
-                            .trim(from: 0, to: isSigning ? signingProgress : downloader.progress)
+                            .trim(from: 0, to: isSigning ? 1.0 : overallProgress)
                             .stroke(isSigning ? Color.orange : Color.blue, lineWidth: 3)
                             .frame(width: 28, height: 28)
                             .rotationEffect(.degrees(-90))
+                            .animation(.linear, value: overallProgress)
                     } else {
                         Text("GET")
                             .font(.system(size: 14, weight: .bold))
@@ -108,125 +143,77 @@ struct AppRowView: View {
             }
         }
         .padding(.vertical, 4)
+        .onReceive(timer) { _ in
+            if let dl = currentDownload {
+                // خوێندنەوەی بەردەوامی مێگابایتەکان
+                self.progress = dl.progress
+                self.bytesDownloaded = dl.bytesDownloaded
+                self.totalBytes = dl.totalBytes
+                self.unpackageProgress = dl.unpackageProgress
+                
+                // کاتێک داونلۆد تەواو دەبێت، فایلەکە لە لیستی manualDownloads نامێنێت
+                if !downloadManager.manualDownloads.contains(where: { $0 === dl }) {
+                    self.currentDownload = nil
+                    startSigningLatestImportedApp() // دەستپێکردنی مۆرکردن
+                }
+            }
+        }
     }
     
-    // پرۆسەی سەرەکی (داونلۆد -> مۆرکردن -> ئینستاڵ)
-    func startProcess() {
+    // ١. دەستپێکردنی داونلۆد بە سیستەمی ئەسڵی ئایفۆنەکەت
+    func startNativeDownloadAndSign() {
+        let selectedIndex = UserDefaults.standard.integer(forKey: "ashtemobile.selectedCert")
+        guard certificates.indices.contains(selectedIndex) else { return }
+        
+        guard let url = URL(string: app.downloadURL) else { return }
+        let id = "AshteMobileStore_\(UUID().uuidString)"
+        
+        // بانگکردنی فەنکشنی ناو LibraryView
+        if let dl = downloadManager.startDownload(from: url, id: id) as? Download {
+            self.currentDownload = dl
+        } else {
+            // ئەگەر ڕاستەوخۆ نەیگەڕاندەوە، لە لیستەکە دەریدەهێنین
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                if let lastDL = downloadManager.manualDownloads.last {
+                    self.currentDownload = lastDL
+                }
+            }
+        }
+    }
+    
+    // ٢. مۆرکردن و ئینستاڵی ڕاستەقینە بێ ئێرۆر!
+    func startSigningLatestImportedApp() {
         let selectedIndex = UserDefaults.standard.integer(forKey: "ashtemobile.selectedCert")
         guard certificates.indices.contains(selectedIndex) else { return }
         let cert = certificates[selectedIndex]
         
-        guard let url = URL(string: app.downloadURL) else { return }
+        isSigning = true
         
-        // ١. دەستپێکردنی داونلۆد بە خوێندنەوەی قەبارە (MB)
-        downloader.download(url: url, sizeStr: app.size ?? "Unknown") { localURL in
-            guard let localURL = localURL else { return }
+        // چاوەڕێ دەکەین تا فایلی داونلۆدکراو بە تەواوی دەچێتە ناو Library
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            guard let latestApp = importedApps.first else {
+                isSigning = false
+                return
+            }
             
-            isSigning = true
-            withAnimation { signingProgress = 0.5 }
-            
-            // ٢. دروستکردنی مۆدێلە ڕاستەقینەکە بێ ئێرۆر
-            let downloadedApp = RemoteDownloadedApp(
-                uuid: UUID().uuidString,
-                name: app.name,
-                version: app.version,
-                identifier: nil,
-                minOSVersion: nil,
-                url: localURL,
-                iconData: nil,
-                isSigned: false
-            )
-            
-            // ٣. مۆرکردنی ڕاستەقینە بە شەهادەکە
+            // 💡 ئێستا مۆدێلی (latestApp) بەکاردێنین کە فایلی ئەسڵی خۆتە و ئێرۆر نادات!
             FR.signPackageFile(
-                downloadedApp,
+                latestApp,
                 using: OptionsManager.shared.options,
                 icon: nil,
                 certificate: cert
             ) { signError in
                 DispatchQueue.main.async {
-                    withAnimation { signingProgress = 1.0 }
-                    
                     if signError == nil {
-                        // ٤. ناردنی فەرمانی Install بۆ ئایفۆن!
+                        // 🚀 ناردنی فەرمانی Install بۆ ئایفۆن
                         NotificationCenter.default.post(name: NSNotification.Name("AshteMobile.installApp"), object: nil)
                     }
                     
                     DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
                         isSigning = false
-                        signingProgress = 0.0
                     }
                 }
             }
         }
     }
-}
-
-// MARK: - سیستەمی داونلۆدی ڕاستەقینە بۆ خوێندنەوەی MB
-class AppDownloader: NSObject, ObservableObject, URLSessionDownloadDelegate {
-    @Published var progress: Double = 0.0
-    @Published var statusText: String = ""
-    @Published var isDownloading = false
-    
-    var completion: ((URL?) -> Void)?
-    var expectedSize: String = ""
-    
-    func download(url: URL, sizeStr: String, completion: @escaping (URL?) -> Void) {
-        self.completion = completion
-        self.expectedSize = sizeStr
-        self.isDownloading = true
-        self.progress = 0.0
-        self.statusText = "0 MB / \(sizeStr)"
-        
-        let session = URLSession(configuration: .default, delegate: self, delegateQueue: .main)
-        session.downloadTask(with: url).resume()
-    }
-    
-    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
-        DispatchQueue.main.async {
-            let mbWritten = Double(totalBytesWritten) / 1048576.0
-            
-            if totalBytesExpectedToWrite > 0 {
-                self.progress = Double(totalBytesWritten) / Double(totalBytesExpectedToWrite)
-                self.statusText = String(format: "%.1f MB / %@", mbWritten, self.expectedSize)
-            } else {
-                // ئەگەر قەبارەی کۆتایی نەزاندرا، تەنها MB دابەزیوەکە نیشان دەدات
-                self.statusText = String(format: "%.1f MB / %@", mbWritten, self.expectedSize)
-                self.progress += 0.01
-                if self.progress > 0.9 { self.progress = 0.1 }
-            }
-        }
-    }
-    
-    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
-        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".ipa")
-        try? FileManager.default.moveItem(at: location, to: tempURL)
-        
-        DispatchQueue.main.async {
-            self.isDownloading = false
-            self.completion?(tempURL)
-        }
-    }
-    
-    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-        if let _ = error {
-            DispatchQueue.main.async {
-                self.statusText = "Error!"
-                self.isDownloading = false
-                self.completion?(nil)
-            }
-        }
-    }
-}
-
-// MARK: - مۆدێلی تەواو (بۆ ئەوەی هەرگیز Error 65 نەداتەوە)
-struct RemoteDownloadedApp: AppInfoPresentable {
-    var uuid: String?
-    var name: String?
-    var version: String?
-    var identifier: String?
-    var minOSVersion: String?
-    var url: URL?
-    var iconData: Data?
-    var isSigned: Bool
 }
