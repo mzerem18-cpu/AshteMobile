@@ -1,17 +1,18 @@
 import Foundation
 
 struct RemoteApp: Codable, Identifiable {
-    var id: String { UUID().uuidString }
-    
     let name: String
     let version: String?
     let iconURL: String?
-    let bannerURL: String?   // 💡 بۆ وێنەی گەورەی ناوەوە
-    let category: String?    // 💡 بۆ جیاکردنەوەی Apps و Games
+    let bannerURL: String?
+    let category: String?
     let downloadURL: String?
     let size: String?
-    let status: String?      // 💡 بۆ نیشانەی NEW لەسەر وێنەکان
-    let hack: [String]? 
+    let status: String?
+    let hack: [String]?
+    
+    // بەکارهێنانی ناوی یارییەکە وەک ئایدی بۆ ئەوەی ئێرۆر نەدات
+    var id: String { name } 
     
     var description: String? {
         return hack?.joined(separator: "\n")
@@ -19,12 +20,14 @@ struct RemoteApp: Codable, Identifiable {
     
     var fullIconURL: URL? {
         guard let path = iconURL else { return nil }
-        return URL(string: "https://ashtemobile.site/\(path)")
+        let safePath = path.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? path
+        return URL(string: "https://ashtemobile.site/\(safePath)")
     }
     
     var fullBannerURL: URL? {
         guard let path = bannerURL else { return nil }
-        return URL(string: "https://ashtemobile.site/\(path)")
+        let safePath = path.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? path
+        return URL(string: "https://ashtemobile.site/\(safePath)")
     }
     
     var actualDownloadURL: URL? {
