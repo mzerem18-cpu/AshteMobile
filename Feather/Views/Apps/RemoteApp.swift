@@ -11,7 +11,6 @@ struct RemoteApp: Codable, Identifiable {
     let status: String?
     let hack: [String]?
     
-    // بەکارهێنانی ناوی یارییەکە وەک ئایدی بۆ ئەوەی ئێرۆر نەدات
     var id: String { name } 
     
     var description: String? {
