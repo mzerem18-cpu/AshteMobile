@@ -6,16 +6,24 @@ struct RemoteApp: Codable, Identifiable {
     let name: String
     let version: String?
     let iconURL: String?
-    let downloadURL: String? // 💡 چارەسەری ئێرۆری JSON (ئێستا کراش ناکات ئەگەر لینکەکەش نەبێت)
+    let bannerURL: String?   // 💡 بۆ وێنەی گەورەی ناوەوە
+    let category: String?    // 💡 بۆ جیاکردنەوەی Apps و Games
+    let downloadURL: String?
     let size: String?
+    let status: String?      // 💡 بۆ نیشانەی NEW لەسەر وێنەکان
     let hack: [String]? 
     
     var description: String? {
-        return hack?.joined(separator: " • ")
+        return hack?.joined(separator: "\n")
     }
     
     var fullIconURL: URL? {
         guard let path = iconURL else { return nil }
+        return URL(string: "https://ashtemobile.site/\(path)")
+    }
+    
+    var fullBannerURL: URL? {
+        guard let path = bannerURL else { return nil }
         return URL(string: "https://ashtemobile.site/\(path)")
     }
     
@@ -40,8 +48,11 @@ struct RemoteApp: Codable, Identifiable {
         case name = "name"
         case version = "version"
         case iconURL = "image"
+        case bannerURL = "banner"
+        case category = "category"
         case downloadURL = "url"
         case size = "size"
+        case status = "status"
         case hack = "hack"
     }
 }
