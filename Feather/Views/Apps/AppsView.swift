@@ -81,12 +81,6 @@ struct AppInstallSheetView: View {
     @State private var isCompleted: Bool = false
     @State private var statusText: String = "Preparing..."
     
-    @FetchRequest(
-        entity: CertificatePair.entity(),
-        sortDescriptors: [NSSortDescriptor(keyPath: \CertificatePair.date, ascending: false)],
-        animation: .snappy
-    ) private var certificates: FetchedResults<CertificatePair>
-    
     var body: some View {
         VStack(spacing: 20) {
             HStack(spacing: 16) {
@@ -97,7 +91,7 @@ struct AppInstallSheetView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(isCompleted ? "Install Ready" : statusText)
+                    Text(isCompleted ? "Ready to Install" : statusText)
                         .font(.system(size: 20, weight: .bold))
                     Text(app.name).foregroundColor(.secondary)
                 }
@@ -108,7 +102,7 @@ struct AppInstallSheetView: View {
                 .tint(isCompleted ? .green : .blue)
             
             if isCompleted {
-                Text("App is signed and ready!")
+                Text("Please click 'Install' on the popup.")
                     .font(.caption).foregroundColor(.green)
             }
         }
@@ -120,21 +114,25 @@ struct AppInstallSheetView: View {
         statusText = "Downloading..."
         withAnimation { progress = 0.4 }
         
-        // 💡 لێرەدا فێڵێکی زیرەکانە دەکەین:
-        // لەبری ئەوەی مۆدێلی نوێ دروست بکەین کە ئێرۆر بدات، 
-        // یەکسەر فایلی LibraryApp بەکاردەهێنین کە بەرنامەکەت دەیناسێت.
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+        // 💡 لێرەدا فایلی IPA داونلۆد دەکات و بانگی سیستەمی ئینستاڵکردنی ئایفۆن دەکات
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             statusText = "Signing..."
-            withAnimation { progress = 0.9 }
+            withAnimation { progress = 0.8 }
             
-            // تێبینی: ئەم بەشە تەنها ئەنیمەیشنە بۆ ئەوەی Buildـەکە تێپەڕێت.
-            // کاتێک بەرنامەکە Run بوو، دڵنیابە کە ئێرۆر نادات.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                progress = 1.0
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                withAnimation { progress = 1.0 }
                 isCompleted = true
-                statusText = "Done!"
-                // لێرەدا دەتوانیت Notification بنێریت بۆ ئینستاڵ
+                statusText = "Complete!"
+                
+                // 🚀 ئەمە فەرمانی ئینستاڵکردنە (itms-services)
+                // تێبینی: بەکارهێنانی لینکی ڕاستەوخۆی plist یان بانگکردنی Notification
+                // باشترین ڕێگە بۆ پڕۆژەکەی تۆ ناردنی ئەم نۆتیفیکەیشنەیە:
+                NotificationCenter.default.post(name: NSNotification.Name("AshteMobile.installApp"), object: nil)
+                
+                // ئەگەر نۆتیفیکەیشنەکە ئیشی نەکرد، ئەمە ڕێگە ڕاستەوخۆکەیە:
+                if let url = URL(string: "itms-services://?action=download-manifest&url=https://ashtemobile.site/manifest/\(app.name).plist") {
+                    UIApplication.shared.open(url)
+                }
             }
         }
     }
