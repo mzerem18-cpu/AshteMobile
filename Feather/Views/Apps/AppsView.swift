@@ -1,5 +1,7 @@
 import SwiftUI
 import CoreData
+
+// ئەگەر پڕۆژەکەت پێویستی بەم دووانە بوو با هەبن بۆ ئەوەی ئێرۆر نەدات
 import NimbleViews
 import NimbleExtensions
 
@@ -34,7 +36,6 @@ struct AppsView: View {
                     ScrollView {
                         VStack(spacing: 20) {
                             
-                            // بەشی گەڕان
                             HStack {
                                 Image(systemName: "magnifyingglass").foregroundColor(.gray)
                                 TextField("Search IPA Files...", text: $searchText)
@@ -44,7 +45,6 @@ struct AppsView: View {
                             .cornerRadius(12)
                             .padding(.horizontal)
                             
-                            // بەشی فلتەر
                             Picker("", selection: $selectedFilter) {
                                 Text("ALL").tag(0)
                                 Text("APP").tag(1)
@@ -53,7 +53,6 @@ struct AppsView: View {
                             .pickerStyle(SegmentedPickerStyle())
                             .padding(.horizontal)
                             
-                            // لیستی بەرنامەکان
                             VStack(alignment: .leading, spacing: 15) {
                                 Text("All IPA Files")
                                     .font(.title2)
@@ -84,6 +83,9 @@ struct AppsView: View {
 struct AppCardView: View {
     var app: RemoteApp
     @State private var isAdded = false
+    
+    // 🔥 ناساندنی مەنەجەرەکە بە ڕێگە ڕاستەکەی خۆت بۆ نەهێشتنی ئێرۆر 65
+    @StateObject private var downloadManager = DownloadManager.shared
     
     var body: some View {
         HStack(spacing: 15) {
@@ -142,7 +144,7 @@ struct AppCardView: View {
     func sendToLibrary() {
         guard let url = app.actualDownloadURL else { return }
         let id = "AshteMobileStore_\(UUID().uuidString)"
-        _ = DownloadManager.shared.startDownload(from: url, id: id)
+        _ = downloadManager.startDownload(from: url, id: id)
         
         withAnimation { isAdded = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
@@ -156,6 +158,9 @@ struct AppDetailView: View {
     var app: RemoteApp
     @State private var isAdded = false
     
+    // 🔥 ناساندنی مەنەجەرەکە بە ڕێگە ڕاستەکە
+    @StateObject private var downloadManager = DownloadManager.shared
+    
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
@@ -164,16 +169,17 @@ struct AppDetailView: View {
                         AsyncImage(url: bannerURL) { image in
                             image.resizable().aspectRatio(contentMode: .fill)
                         } placeholder: {
-                            LinearGradient(colors: [.blue, .purple], startPoint: .top, endPoint: .bottom)
+                            // 💡 بەکارهێنانی کۆدی پارێزراو بۆ ئەوەی لە ڤێرژنە کۆنەکانیش کار بکات
+                            LinearGradient(gradient: Gradient(colors: [.blue, .purple]), startPoint: .top, endPoint: .bottom)
                         }
                         .frame(height: 220)
                         .clipped()
                     } else {
-                        LinearGradient(colors: [.blue, .purple], startPoint: .top, endPoint: .bottom)
+                        LinearGradient(gradient: Gradient(colors: [.blue, .purple]), startPoint: .top, endPoint: .bottom)
                             .frame(height: 220)
                     }
                     
-                    LinearGradient(colors: [.clear, Color(UIColor.systemBackground)], startPoint: .top, endPoint: .bottom)
+                    LinearGradient(gradient: Gradient(colors: [.clear, Color(UIColor.systemBackground)]), startPoint: .top, endPoint: .bottom)
                         .frame(height: 60)
                 }
                 
@@ -193,7 +199,7 @@ struct AppDetailView: View {
                             .foregroundColor(.secondary)
                         
                         HStack(spacing: 2) {
-                            ForEach(0..<5) { _ in
+                            ForEach(0..<5, id: \.self) { _ in
                                 Image(systemName: "star.fill").foregroundColor(.orange).font(.system(size: 12))
                             }
                             Text("(4.9)").font(.system(size: 12)).foregroundColor(.gray)
@@ -269,7 +275,7 @@ struct AppDetailView: View {
     func sendToLibrary() {
         guard let url = app.actualDownloadURL else { return }
         let id = "AshteMobileStore_\(UUID().uuidString)"
-        _ = DownloadManager.shared.startDownload(from: url, id: id)
+        _ = downloadManager.startDownload(from: url, id: id)
         
         withAnimation { isAdded = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
