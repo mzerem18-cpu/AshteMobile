@@ -1,11 +1,13 @@
 import SwiftUI
+import CoreData
+import NimbleViews
+import NimbleExtensions
 
 struct AppsView: View {
     @StateObject private var viewModel = AppsViewModel()
     @State private var searchText = ""
     @State private var selectedFilter = 0 // 0: ALL, 1: APP, 2: GAMES
     
-    // فلتەرکردنی بەرنامەکان بەپێی گەڕان و بەشەکان
     var filteredApps: [RemoteApp] {
         var apps = viewModel.apps
         
@@ -42,7 +44,7 @@ struct AppsView: View {
                             .cornerRadius(12)
                             .padding(.horizontal)
                             
-                            // بەشی فلتەر (ALL, APP, GAMES)
+                            // بەشی فلتەر
                             Picker("", selection: $selectedFilter) {
                                 Text("ALL").tag(0)
                                 Text("APP").tag(1)
@@ -51,7 +53,7 @@ struct AppsView: View {
                             .pickerStyle(SegmentedPickerStyle())
                             .padding(.horizontal)
                             
-                            // لیستی بەرنامەکان (شێوازی کارد)
+                            // لیستی بەرنامەکان
                             VStack(alignment: .leading, spacing: 15) {
                                 Text("All IPA Files")
                                     .font(.title2)
@@ -85,7 +87,6 @@ struct AppCardView: View {
     
     var body: some View {
         HStack(spacing: 15) {
-            // وێنە لەگەڵ نیشانەی NEW
             ZStack(alignment: .topLeading) {
                 AsyncImage(url: app.fullIconURL) { image in
                     image.resizable().aspectRatio(contentMode: .fit)
@@ -120,7 +121,6 @@ struct AppCardView: View {
             
             Spacer()
             
-            // دوگمەی GET کە ڕاستەوخۆ دەینێرێت بۆ Library
             Button(action: sendToLibrary) {
                 Text(isAdded ? "ADDED" : "GET")
                     .font(.system(size: 14, weight: .bold))
@@ -151,7 +151,7 @@ struct AppCardView: View {
     }
 }
 
-// MARK: - پەڕەی زانیارییەکانی یارییەکە (وەک Royal Match)
+// MARK: - پەڕەی زانیارییەکانی یارییەکە
 struct AppDetailView: View {
     var app: RemoteApp
     @State private var isAdded = false
@@ -159,7 +159,6 @@ struct AppDetailView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                // وێنەی سەرەوە (Banner)
                 ZStack(alignment: .bottom) {
                     if let bannerURL = app.fullBannerURL {
                         AsyncImage(url: bannerURL) { image in
@@ -174,12 +173,10 @@ struct AppDetailView: View {
                             .frame(height: 220)
                     }
                     
-                    // لێڵی خوارەوەی وێنەکە
                     LinearGradient(colors: [.clear, Color(UIColor.systemBackground)], startPoint: .top, endPoint: .bottom)
                         .frame(height: 60)
                 }
                 
-                // بەشی ناونیشان و ئایکۆن
                 HStack(alignment: .top, spacing: 16) {
                     AsyncImage(url: app.fullIconURL) { image in
                         image.resizable().aspectRatio(contentMode: .fit)
@@ -195,7 +192,6 @@ struct AppDetailView: View {
                             .font(.system(size: 15))
                             .foregroundColor(.secondary)
                         
-                        // ئەستێرەکان (دیزاین)
                         HStack(spacing: 2) {
                             ForEach(0..<5) { _ in
                                 Image(systemName: "star.fill").foregroundColor(.orange).font(.system(size: 12))
@@ -223,7 +219,6 @@ struct AppDetailView: View {
                 .offset(y: -40)
                 .padding(.bottom, -40)
                 
-                // زانیارییە خێراکان
                 HStack(spacing: 15) {
                     InfoPill(icon: "tag.fill", text: "V \(app.version ?? "1.0")")
                     InfoPill(icon: "internaldrive.fill", text: app.size ?? "Unknown")
@@ -232,7 +227,6 @@ struct AppDetailView: View {
                 
                 Divider().padding(.horizontal)
                 
-                // بەشی وەسف و هاکەکان
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Description")
                         .font(.title3)
@@ -255,7 +249,6 @@ struct AppDetailView: View {
                 
                 Divider().padding(.horizontal)
                 
-                // بەشی زانیارییەکان
                 VStack(alignment: .leading, spacing: 15) {
                     Text("Information")
                         .font(.title3)
@@ -285,7 +278,6 @@ struct AppDetailView: View {
     }
 }
 
-// MARK: - پێکهاتە بچووکەکان بۆ دیزاین
 struct InfoPill: View {
     var icon: String
     var text: String
