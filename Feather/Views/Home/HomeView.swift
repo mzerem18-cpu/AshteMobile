@@ -2,7 +2,8 @@
 //  HomeView.swift
 //  AshteMobile
 //
-//  Modern Public UI Version
+//  Created for AshteMobile
+//  Modified to redirect downloads to external website
 //
 
 import SwiftUI
@@ -10,12 +11,9 @@ import NimbleViews
 import Foundation
 import UIKit
 
-// MARK: - Model
-
+// MARK: - Models
 struct HomeApp: Codable, Identifiable {
-
     var id: String { url }
-
     let name: String
     let version: String?
     let category: String?
@@ -29,453 +27,258 @@ struct HomeApp: Codable, Identifiable {
     let hack: [String]?
 
     var fullImageURL: URL? {
-
         guard let img = image else { return nil }
-
-        if img.hasPrefix("http") {
-            return URL(string: img)
-        }
-
+        if img.hasPrefix("http") { return URL(string: img) }
         return URL(string: "https://ashtemobile.site/\(img)")
+    }
+    
+    var fullBannerURL: URL? {
+        if let ban = banner {
+            if ban.hasPrefix("http") { return URL(string: ban) }
+            return URL(string: "https://ashtemobile.site/\(ban)")
+        }
+        return fullImageURL
     }
 }
 
-// MARK: - Home View
-
+// MARK: - Main Home View
 struct HomeView: View {
-
     @State private var apps: [HomeApp] = []
+    
+    // --- بەشی وێنە لاکێشەییەکان ---
     @State private var currentBanner = 0
-
     let myCustomBanners = [
         "https://ashtemobile.site/img/t.png",
         "https://ashtemobile.site/img/i.png"
     ]
-
+    
     let myCustomLinks = [
         "https://t.me/ashtemobile",
         "https://www.instagram.com/ashtemobile"
     ]
-
-    let timer = Timer.publish(
-        every: 4,
-        on: .main,
-        in: .common
-    ).autoconnect()
-
-    // MARK: Categories
-
+    
+    let timer = Timer.publish(every: 4, on: .main, in: .common).autoconnect()
+    
     var groupedApps: [(String, [HomeApp])] {
-
-        let dict = Dictionary(
-            grouping: apps,
-            by: { $0.category ?? "Apps" }
-        )
-
+        let dict = Dictionary(grouping: apps, by: { $0.category ?? "Apps" })
         return dict.sorted { $0.key < $1.key }
     }
-
-    // MARK: UI
-
+    
     var body: some View {
-
-        ZStack {
-
-            // Background
-
-            LinearGradient(
-                colors: [
-                    Color(.systemBackground),
-                    Color.blue.opacity(0.05),
-                    Color.purple.opacity(0.05)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
-
+        ZStack(alignment: .top) {
+            Color(UIColor.systemBackground).ignoresSafeArea()
+            
             NBNavigationView("Discover") {
-
-                ScrollView(.vertical, showsIndicators: false) {
-
+                ScrollView {
                     VStack(spacing: 35) {
-
-                        // MARK: Banner Slider
-
-                        TabView(selection: $currentBanner) {
-
-                            ForEach(0..<myCustomBanners.count, id: \.self) { index in
-
-                                Button {
-
-                                    if let url = URL(string: myCustomLinks[index]) {
-                                        UIApplication.shared.open(url)
+                        
+                        // 1. بەشی وێنە لاکێشەییەکان (Banners)
+                        if !myCustomBanners.isEmpty {
+                            TabView(selection: $currentBanner) {
+                                ForEach(0..<myCustomBanners.count, id: \.self) { index in
+                                    Button(action: {
+                                        if index < myCustomLinks.count, let url = URL(string: myCustomLinks[index]) {
+                                            UIApplication.shared.open(url)
+                                        }
+                                    }) {
+                                        AsyncImage(url: URL(string: myCustomBanners[index])) { image in
+                                            image.resizable()
+                                                 .aspectRatio(contentMode: .fill)
+                                        } placeholder: {
+                                            Color(UIColor.secondarySystemBackground)
+                                                .overlay(Image(systemName: "photo").foregroundColor(.gray.opacity(0.5)))
+                                        }
                                     }
-
-                                } label: {
-
-                                    AsyncImage(
-                                        url: URL(string: myCustomBanners[index])
-                                    ) { image in
-
-                                        image
-                                            .resizable()
-                                            .aspectRatio(contentMode: .fill)
-
-                                    } placeholder: {
-
-                                        RoundedRectangle(cornerRadius: 28)
-                                            .fill(Color.gray.opacity(0.2))
-                                    }
+                                    .buttonStyle(.plain)
+                                    .tag(index)
                                 }
-                                .buttonStyle(.plain)
-                                .tag(index)
+                            }
+                            .frame(height: (UIScreen.main.bounds.width - 40) * (1948.0 / 3464.0))
+                            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                            .padding(.horizontal, 20)
+                            .shadow(color: Color.black.opacity(0.12), radius: 10, x: 0, y: 5)
+                            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .always))
+                            .onReceive(timer) { _ in
+                                guard !myCustomBanners.isEmpty else { return }
+                                withAnimation(.easeInOut(duration: 0.5)) {
+                                    currentBanner = (currentBanner + 1) % myCustomBanners.count
+                                }
                             }
                         }
-                        .frame(height: 210)
-                        .clipShape(
-                            RoundedRectangle(
-                                cornerRadius: 28,
-                                style: .continuous
-                            )
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 28)
-                                .stroke(
-                                    Color.white.opacity(0.1),
-                                    lineWidth: 1
-                                )
-                        )
-                        .shadow(
-                            color: .black.opacity(0.12),
-                            radius: 10,
-                            x: 0,
-                            y: 6
-                        )
-                        .padding(.horizontal, 20)
-                        .tabViewStyle(
-                            PageTabViewStyle(indexDisplayMode: .automatic)
-                        )
-                        .onReceive(timer) { _ in
-
-                            withAnimation {
-
-                                currentBanner =
-                                (currentBanner + 1)
-                                % myCustomBanners.count
-                            }
-                        }
-
-                        // MARK: Categories
-
+                        
+                        // 2. بەشی یاری و بەرنامەکان
                         VStack(alignment: .leading, spacing: 30) {
-
                             ForEach(groupedApps, id: \.0) { category, categoryApps in
-
                                 VStack(alignment: .leading, spacing: 16) {
-
-                                    HStack {
-
+                                    HStack(alignment: .lastTextBaseline) {
                                         Text(category)
-                                            .font(.title.bold())
-
+                                            .font(.system(size: 22, weight: .bold, design: .rounded))
+                                            .foregroundColor(.primary)
                                         Spacer()
-
                                         Text("See All")
+                                            .font(.system(size: 15, weight: .semibold, design: .rounded))
                                             .foregroundColor(.blue)
-                                            .fontWeight(.semibold)
                                     }
                                     .padding(.horizontal, 20)
-
-                                    ScrollView(
-                                        .horizontal,
-                                        showsIndicators: false
-                                    ) {
-
-                                        LazyHStack(spacing: 18) {
-
+                                    
+                                    ScrollView(.horizontal, showsIndicators: false) {
+                                        LazyHStack(spacing: 16) {
                                             ForEach(categoryApps) { app in
-
-                                                Button {
-
-                                                    let generator =
-                                                    UIImpactFeedbackGenerator(
-                                                        style: .medium
-                                                    )
-
-                                                    generator.impactOccurred()
-
-                                                    if let url = URL(
-                                                        string: app.url
-                                                    ) {
-
-                                                        UIApplication.shared.open(url)
-                                                    }
-
-                                                } label: {
-
+                                                Button(action: {
+                                                    openWebsite()
+                                                }) {
                                                     HomeAppCardView(app: app)
                                                 }
                                                 .buttonStyle(.plain)
                                             }
                                         }
                                         .padding(.horizontal, 20)
-                                        .padding(.bottom, 10)
+                                        .padding(.bottom, 15)
+                                        .padding(.top, 5)
                                     }
                                 }
                             }
                         }
-
-                        // MARK: Footer
-
+                        
+                        // 3. بەشی سۆشیاڵ میدیاکان
                         SocialMediaFooter()
+                            .padding(.top, 10)
                             .padding(.bottom, 40)
                     }
-                    .padding(.top, 20)
+                    .padding(.top, 15)
+                }
+                .refreshable {
+                    await loadApps()
                 }
             }
-        }
-        .task {
-
-            await loadApps()
+            .onAppear {
+                Task { await loadApps() }
+            }
         }
     }
-
-    // MARK: Load Apps
-
-    private func loadApps() async {
-
-        guard let url = URL(
-            string: "https://ashtemobile.site/ipaas.json"
-        ) else {
-            return
+    
+    // 💡 فەنکشنی کردنەوەی وێبسایتەکە
+    private func openWebsite() {
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.impactOccurred()
+        
+        if let url = URL(string: "https://ashtemobile.site") {
+            UIApplication.shared.open(url)
         }
-
+    }
+    
+    // هێنانی داتا
+    private func loadApps() async {
+        guard let url = URL(string: "https://ashtemobile.site/ipa.json") else { return }
         var request = URLRequest(url: url)
         request.cachePolicy = .reloadIgnoringLocalCacheData
-
         do {
-
-            let (data, _) = try await URLSession.shared.data(
-                for: request
-            )
-
-            let decoded = try JSONDecoder().decode(
-                [HomeApp].self,
-                from: data
-            )
-
-            await MainActor.run {
-
+            let (data, _) = try await URLSession.shared.data(for: request)
+            let decoded = try JSONDecoder().decode([HomeApp].self, from: data)
+            DispatchQueue.main.async {
                 self.apps = decoded
             }
-
         } catch {
-
             print("Error loading apps: \(error)")
         }
     }
 }
 
-// MARK: - App Card
-
+// MARK: - App Card View
 struct HomeAppCardView: View {
-
     let app: HomeApp
-
+    
     var body: some View {
-
-        VStack(spacing: 12) {
-
-            // App Image
-
+        VStack(alignment: .center, spacing: 10) {
+            
             AsyncImage(url: app.fullImageURL) { image in
-
-                image
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-
+                image.resizable().aspectRatio(contentMode: .fill)
             } placeholder: {
-
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(Color.gray.opacity(0.2))
+                Color(UIColor.secondarySystemBackground)
             }
             .frame(width: 80, height: 80)
-            .clipShape(
-                RoundedRectangle(
-                    cornerRadius: 20,
-                    style: .continuous
-                )
-            )
-            .shadow(
-                color: .black.opacity(0.1),
-                radius: 8,
-                x: 0,
-                y: 4
-            )
-
-            // App Info
-
-            VStack(spacing: 4) {
-
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .shadow(color: Color.black.opacity(0.08), radius: 6, x: 0, y: 3)
+            
+            VStack(spacing: 2) {
                 Text(app.name)
-                    .font(.headline)
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
                     .foregroundColor(.primary)
                     .lineLimit(1)
-
+                    .multilineTextAlignment(.center)
+                
                 Text(app.category ?? "App")
-                    .font(.caption)
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
                     .foregroundColor(.secondary)
             }
-
-            Spacer()
-
-            // OPEN Button
-
-            HStack(spacing: 5) {
-
-                Image(systemName: "arrow.down.circle.fill")
-
-                Text("OPEN")
-            }
-            .font(.system(size: 13, weight: .bold))
-            .foregroundColor(.white)
-            .frame(maxWidth: .infinity)
-            .frame(height: 34)
-            .background(
-
-                LinearGradient(
-                    colors: [.blue, .purple],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-            )
-            .clipShape(Capsule())
+            
+            Spacer(minLength: 5)
+            
+            // 💡 لێرەدا GETم گۆڕی بۆ OPEN
+            Text("OPEN")
+                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .frame(maxWidth: .infinity)
+                .frame(height: 30)
+                .background(Color.blue.opacity(0.12))
+                .foregroundColor(.blue)
+                .clipShape(Capsule())
         }
-        .padding(15)
+        .padding(14)
         .frame(width: 135, height: 200)
-        .background(
-            Color(.secondarySystemBackground)
-        )
-        .clipShape(
-            RoundedRectangle(
-                cornerRadius: 28,
-                style: .continuous
-            )
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 28)
-                .stroke(
-                    Color.white.opacity(0.08),
-                    lineWidth: 1
-                )
-        )
-        .shadow(
-            color: .black.opacity(0.08),
-            radius: 8,
-            x: 0,
-            y: 4
-        )
+        .background(Color(UIColor.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
     }
 }
 
-// MARK: - Footer
-
+// MARK: - Social Media Footer
 struct SocialMediaFooter: View {
-
     var body: some View {
-
         VStack(spacing: 20) {
-
             Text("Connect With Us")
-                .font(.title3.bold())
-
+                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .foregroundColor(.primary)
+            
             HStack(spacing: 24) {
-
-                SocialButton(
-                    icon: "paperplane.fill",
-                    color: .blue,
-                    url: "https://t.me/ashtemobile"
-                )
-
-                SocialButton(
-                    icon: "camera.fill",
-                    color: .purple,
-                    url: "https://instagram.com/ashtemobile"
-                )
-
-                SocialButton(
-                    icon: "play.tv.fill",
-                    color: .black,
-                    url: "https://tiktok.com/@ashtemobile"
-                )
+                SocialButton(icon: "paperplane.fill", color: .blue, url: "https://t.me/ashtemobile")
+                SocialButton(icon: "camera.fill", color: Color(UIColor.systemPurple), url: "https://www.instagram.com/ashtemobile")
+                SocialButton(icon: "play.tv.fill", color: .primary, url: "https://www.tiktok.com/@ashtemobile")
             }
         }
-        .padding(.vertical, 25)
+        .padding(.vertical, 24)
         .frame(maxWidth: .infinity)
-        .background(
-            Color(.secondarySystemBackground)
-        )
-        .clipShape(
-            RoundedRectangle(
-                cornerRadius: 28,
-                style: .continuous
-            )
-        )
+        .background(Color(UIColor.secondarySystemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .padding(.horizontal, 20)
     }
 }
 
-// MARK: - Social Button
-
 struct SocialButton: View {
-
     let icon: String
     let color: Color
     let url: String
-
+    
     var body: some View {
-
-        Button {
-
+        Button(action: {
             if let link = URL(string: url) {
-
                 UIApplication.shared.open(link)
             }
-
-        } label: {
-
+        }) {
             Image(systemName: icon)
                 .font(.system(size: 20, weight: .bold))
                 .foregroundColor(.white)
-                .frame(width: 55, height: 55)
+                .frame(width: 50, height: 50)
                 .background(color)
                 .clipShape(Circle())
-                .shadow(
-                    color: color.opacity(0.3),
-                    radius: 6,
-                    x: 0,
-                    y: 4
-                )
         }
         .buttonStyle(ScaleButtonStyle())
     }
 }
 
-// MARK: - Animation
-
 struct ScaleButtonStyle: ButtonStyle {
-
     func makeBody(configuration: Configuration) -> some View {
-
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.94 : 1)
-            .animation(
-                .spring(
-                    response: 0.3,
-                    dampingFraction: 0.6
-                ),
-                value: configuration.isPressed
-            )
+            .scaleEffect(configuration.isPressed ? 0.92 : 1)
+            .animation(.easeInOut(duration: 0.2), value: configuration.isPressed)
     }
 }
