@@ -35,21 +35,17 @@ struct AppsView: View {
 struct AppRowView: View {
     var app: RemoteApp
     
-    // بەکارهێنانی مەنەجەرە ئەسڵییەکەی بەرنامەکەی خۆت
     @ObservedObject var downloadManager = DownloadManager.shared
     @State private var currentDownload: Download? = nil
     @State private var isSigning = false
     
-    // زانیارییەکانی داونلۆد
     @State private var progress: Double = 0
     @State private var bytesDownloaded: Int64 = 0
     @State private var totalBytes: Int64 = 0
     @State private var unpackageProgress: Double = 0
     
-    // تایمەرێک بۆ خوێندنەوەی بەردەوامی داونلۆدەکە بێ ئێرۆر
     let timer = Timer.publish(every: 0.2, on: .main, in: .common).autoconnect()
     
-    // هێنانی ئەپە داونلۆدکراوە ئەسڵییەکانی ناو Library
     @FetchRequest(
         entity: Imported.entity(),
         sortDescriptors: [NSSortDescriptor(keyPath: \Imported.date, ascending: false)],
@@ -62,7 +58,6 @@ struct AppRowView: View {
         animation: .snappy
     ) private var certificates: FetchedResults<CertificatePair>
 
-    // هاوکێشەی ئەسڵی بەرنامەکەت بۆ ڕێژەی داونلۆد
     var overallProgress: Double {
         if let dl = currentDownload {
             return dl.onlyArchiving ? unpackageProgress : (0.3 * unpackageProgress) + (0.7 * progress)
@@ -145,34 +140,36 @@ struct AppRowView: View {
         .padding(.vertical, 4)
         .onReceive(timer) { _ in
             if let dl = currentDownload {
-                // خوێندنەوەی بەردەوامی مێگابایتەکان
                 self.progress = dl.progress
                 self.bytesDownloaded = dl.bytesDownloaded
                 self.totalBytes = dl.totalBytes
                 self.unpackageProgress = dl.unpackageProgress
                 
-                // کاتێک داونلۆد تەواو دەبێت، فایلەکە لە لیستی manualDownloads نامێنێت
+                // کاتێک داونلۆد تەواو بوو
                 if !downloadManager.manualDownloads.contains(where: { $0 === dl }) {
                     self.currentDownload = nil
-                    startSigningLatestImportedApp() // دەستپێکردنی مۆرکردن
+                    // دڵنیابوونەوە لەوەی کە بەڕاستی داونلۆد بووە
+                    if self.bytesDownloaded > 0 {
+                        startSigningLatestImportedApp()
+                    } else {
+                        self.isSigning = false
+                    }
                 }
             }
         }
     }
     
-    // ١. دەستپێکردنی داونلۆد بە سیستەمی ئەسڵی ئایفۆنەکەت
     func startNativeDownloadAndSign() {
         let selectedIndex = UserDefaults.standard.integer(forKey: "ashtemobile.selectedCert")
         guard certificates.indices.contains(selectedIndex) else { return }
         
-        guard let url = URL(string: app.downloadURL) else { return }
+        // 🔥 لێرەدا لینکی شکێنراوی ڕاستەقینە بەکاردەهێنین
+        guard let url = app.actualDownloadURL else { return }
         let id = "AshteMobileStore_\(UUID().uuidString)"
         
-        // بانگکردنی فەنکشنی ناو LibraryView
         if let dl = downloadManager.startDownload(from: url, id: id) as? Download {
             self.currentDownload = dl
         } else {
-            // ئەگەر ڕاستەوخۆ نەیگەڕاندەوە، لە لیستەکە دەریدەهێنین
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 if let lastDL = downloadManager.manualDownloads.last {
                     self.currentDownload = lastDL
@@ -181,7 +178,6 @@ struct AppRowView: View {
         }
     }
     
-    // ٢. مۆرکردن و ئینستاڵی ڕاستەقینە بێ ئێرۆر!
     func startSigningLatestImportedApp() {
         let selectedIndex = UserDefaults.standard.integer(forKey: "ashtemobile.selectedCert")
         guard certificates.indices.contains(selectedIndex) else { return }
@@ -189,14 +185,12 @@ struct AppRowView: View {
         
         isSigning = true
         
-        // چاوەڕێ دەکەین تا فایلی داونلۆدکراو بە تەواوی دەچێتە ناو Library
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             guard let latestApp = importedApps.first else {
                 isSigning = false
                 return
             }
             
-            // 💡 ئێستا مۆدێلی (latestApp) بەکاردێنین کە فایلی ئەسڵی خۆتە و ئێرۆر نادات!
             FR.signPackageFile(
                 latestApp,
                 using: OptionsManager.shared.options,
@@ -205,10 +199,8 @@ struct AppRowView: View {
             ) { signError in
                 DispatchQueue.main.async {
                     if signError == nil {
-                        // 🚀 ناردنی فەرمانی Install بۆ ئایفۆن
                         NotificationCenter.default.post(name: NSNotification.Name("AshteMobile.installApp"), object: nil)
                     }
-                    
                     DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
                         isSigning = false
                     }
