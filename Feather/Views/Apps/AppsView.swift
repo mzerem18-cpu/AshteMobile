@@ -1,27 +1,17 @@
 import SwiftUI
-import CoreData
-
-// ئەگەر پڕۆژەکەت پێویستی بەم دووانە بوو با هەبن بۆ ئەوەی ئێرۆر نەدات
 import NimbleViews
-import NimbleExtensions
 
 struct AppsView: View {
     @StateObject private var viewModel = AppsViewModel()
     @State private var searchText = ""
-    @State private var selectedFilter = 0 // 0: ALL, 1: APP, 2: GAMES
+    @State private var selectedFilter = 0
     
     var filteredApps: [RemoteApp] {
         var apps = viewModel.apps
+        if selectedFilter == 1 { apps = apps.filter { $0.category?.lowercased() == "apps" } }
+        else if selectedFilter == 2 { apps = apps.filter { $0.category?.lowercased() == "games" } }
         
-        if selectedFilter == 1 {
-            apps = apps.filter { $0.category?.lowercased() == "apps" }
-        } else if selectedFilter == 2 {
-            apps = apps.filter { $0.category?.lowercased() == "games" }
-        }
-        
-        if !searchText.isEmpty {
-            apps = apps.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
-        }
+        if !searchText.isEmpty { apps = apps.filter { $0.name.localizedCaseInsensitiveContains(searchText) } }
         return apps
     }
     
@@ -35,7 +25,6 @@ struct AppsView: View {
                 } else {
                     ScrollView {
                         VStack(spacing: 20) {
-                            
                             HStack {
                                 Image(systemName: "magnifyingglass").foregroundColor(.gray)
                                 TextField("Search IPA Files...", text: $searchText)
@@ -72,29 +61,22 @@ struct AppsView: View {
                 }
             }
             .navigationTitle("Featured IPA")
-            .onAppear {
-                if viewModel.apps.isEmpty { viewModel.fetchApps() }
-            }
+            .onAppear { if viewModel.apps.isEmpty { viewModel.fetchApps() } }
         }
     }
 }
 
-// MARK: - دیزاینی کاردەکانی دەرەوە
+// MARK: - دیزاینی کاردەکان
 struct AppCardView: View {
     var app: RemoteApp
     @State private var isAdded = false
-    
-    // 🔥 ناساندنی مەنەجەرەکە بە ڕێگە ڕاستەکەی خۆت بۆ نەهێشتنی ئێرۆر 65
-    @StateObject private var downloadManager = DownloadManager.shared
     
     var body: some View {
         HStack(spacing: 15) {
             ZStack(alignment: .topLeading) {
                 AsyncImage(url: app.fullIconURL) { image in
                     image.resizable().aspectRatio(contentMode: .fit)
-                } placeholder: {
-                    Color.gray.opacity(0.2)
-                }
+                } placeholder: { Color.gray.opacity(0.2) }
                 .frame(width: 65, height: 65)
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                 
@@ -112,18 +94,21 @@ struct AppCardView: View {
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(app.name).font(.system(size: 16, weight: .bold))
-                Text(app.category ?? "App")
-                    .font(.system(size: 13))
-                    .foregroundColor(.secondary)
-                
-                Text("\(app.version ?? "1.0") • \(app.size ?? "Unknown Size")")
-                    .font(.system(size: 11))
-                    .foregroundColor(.gray)
+                Text(app.category ?? "App").font(.system(size: 13)).foregroundColor(.secondary)
+                Text("\(app.version ?? "1.0") • \(app.size ?? "Unknown")").font(.system(size: 11)).foregroundColor(.gray)
             }
-            
             Spacer()
             
-            Button(action: sendToLibrary) {
+            Button(action: {
+                guard let url = app.actualDownloadURL else { return }
+                let id = "AshteMobileStore_\(UUID().uuidString)"
+                
+                // 🔥 بەبێ ناساندنی پێشوەختە ڕاستەوخۆ بانگی دەکەین بۆ ئەوەی ئێرۆر نەدات
+                _ = DownloadManager.shared.startDownload(from: url, id: id)
+                
+                withAnimation { isAdded = true }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) { withAnimation { isAdded = false } }
+            }) {
                 Text(isAdded ? "ADDED" : "GET")
                     .font(.system(size: 14, weight: .bold))
                     .foregroundColor(isAdded ? .gray : .blue)
@@ -140,26 +125,12 @@ struct AppCardView: View {
         .shadow(color: Color.black.opacity(0.03), radius: 5, x: 0, y: 2)
         .padding(.horizontal)
     }
-    
-    func sendToLibrary() {
-        guard let url = app.actualDownloadURL else { return }
-        let id = "AshteMobileStore_\(UUID().uuidString)"
-        _ = downloadManager.startDownload(from: url, id: id)
-        
-        withAnimation { isAdded = true }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            withAnimation { isAdded = false }
-        }
-    }
 }
 
 // MARK: - پەڕەی زانیارییەکانی یارییەکە
 struct AppDetailView: View {
     var app: RemoteApp
     @State private var isAdded = false
-    
-    // 🔥 ناساندنی مەنەجەرەکە بە ڕێگە ڕاستەکە
-    @StateObject private var downloadManager = DownloadManager.shared
     
     var body: some View {
         ScrollView {
@@ -169,18 +140,14 @@ struct AppDetailView: View {
                         AsyncImage(url: bannerURL) { image in
                             image.resizable().aspectRatio(contentMode: .fill)
                         } placeholder: {
-                            // 💡 بەکارهێنانی کۆدی پارێزراو بۆ ئەوەی لە ڤێرژنە کۆنەکانیش کار بکات
                             LinearGradient(gradient: Gradient(colors: [.blue, .purple]), startPoint: .top, endPoint: .bottom)
                         }
-                        .frame(height: 220)
-                        .clipped()
+                        .frame(height: 220).clipped()
                     } else {
                         LinearGradient(gradient: Gradient(colors: [.blue, .purple]), startPoint: .top, endPoint: .bottom)
                             .frame(height: 220)
                     }
-                    
-                    LinearGradient(gradient: Gradient(colors: [.clear, Color(UIColor.systemBackground)]), startPoint: .top, endPoint: .bottom)
-                        .frame(height: 60)
+                    LinearGradient(gradient: Gradient(colors: [.clear, Color(UIColor.systemBackground)]), startPoint: .top, endPoint: .bottom).frame(height: 60)
                 }
                 
                 HStack(alignment: .top, spacing: 16) {
@@ -192,21 +159,23 @@ struct AppDetailView: View {
                     .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
                     
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(app.name)
-                            .font(.system(size: 24, weight: .bold))
-                        Text(app.category ?? "Games")
-                            .font(.system(size: 15))
-                            .foregroundColor(.secondary)
+                        Text(app.name).font(.system(size: 24, weight: .bold))
+                        Text(app.category ?? "Games").font(.system(size: 15)).foregroundColor(.secondary)
                         
                         HStack(spacing: 2) {
-                            ForEach(0..<5, id: \.self) { _ in
-                                Image(systemName: "star.fill").foregroundColor(.orange).font(.system(size: 12))
-                            }
+                            ForEach(0..<5, id: \.self) { _ in Image(systemName: "star.fill").foregroundColor(.orange).font(.system(size: 12)) }
                             Text("(4.9)").font(.system(size: 12)).foregroundColor(.gray)
                         }
                         
                         HStack {
-                            Button(action: sendToLibrary) {
+                            Button(action: {
+                                guard let url = app.actualDownloadURL else { return }
+                                let id = "AshteMobileStore_\(UUID().uuidString)"
+                                _ = DownloadManager.shared.startDownload(from: url, id: id)
+                                
+                                withAnimation { isAdded = true }
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 2) { withAnimation { isAdded = false } }
+                            }) {
                                 Text(isAdded ? "Added to Library" : "Get")
                                     .font(.system(size: 15, weight: .bold))
                                     .foregroundColor(.white)
@@ -221,23 +190,17 @@ struct AppDetailView: View {
                     }
                     Spacer()
                 }
-                .padding(.horizontal)
-                .offset(y: -40)
-                .padding(.bottom, -40)
+                .padding(.horizontal).offset(y: -40).padding(.bottom, -40)
                 
                 HStack(spacing: 15) {
                     InfoPill(icon: "tag.fill", text: "V \(app.version ?? "1.0")")
                     InfoPill(icon: "internaldrive.fill", text: app.size ?? "Unknown")
                 }
                 .padding(.horizontal)
-                
                 Divider().padding(.horizontal)
                 
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Description")
-                        .font(.title3)
-                        .fontWeight(.bold)
-                    
+                    Text("Description").font(.title3).fontWeight(.bold)
                     if let hackList = app.hack, !hackList.isEmpty {
                         ForEach(hackList, id: \.self) { hackItem in
                             HStack(alignment: .top) {
@@ -246,68 +209,38 @@ struct AppDetailView: View {
                             }
                         }
                     } else {
-                        Text("No specific description provided.")
-                            .foregroundColor(.secondary)
+                        Text("No description.").foregroundColor(.secondary)
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal)
+                .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal)
                 
                 Divider().padding(.horizontal)
                 
                 VStack(alignment: .leading, spacing: 15) {
-                    Text("Information")
-                        .font(.title3)
-                        .fontWeight(.bold)
-                    
+                    Text("Information").font(.title3).fontWeight(.bold)
                     InfoRow(title: "Developer", value: "AshteMobile")
                     InfoRow(title: "Category", value: app.category ?? "Games")
                     InfoRow(title: "Minimum iOS", value: "13.0")
                 }
-                .padding(.horizontal)
-                .padding(.bottom, 40)
+                .padding(.horizontal).padding(.bottom, 40)
             }
         }
         .edgesIgnoringSafeArea(.top)
         .navigationBarTitleDisplayMode(.inline)
     }
-    
-    func sendToLibrary() {
-        guard let url = app.actualDownloadURL else { return }
-        let id = "AshteMobileStore_\(UUID().uuidString)"
-        _ = downloadManager.startDownload(from: url, id: id)
-        
-        withAnimation { isAdded = true }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            withAnimation { isAdded = false }
-        }
-    }
 }
 
 struct InfoPill: View {
-    var icon: String
-    var text: String
+    var icon: String; var text: String
     var body: some View {
-        HStack {
-            Image(systemName: icon).foregroundColor(.blue)
-            Text(text).font(.system(size: 13, weight: .semibold))
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
-        .background(Color.blue.opacity(0.08))
-        .cornerRadius(12)
+        HStack { Image(systemName: icon).foregroundColor(.blue); Text(text).font(.system(size: 13, weight: .semibold)) }
+        .frame(maxWidth: .infinity).padding(.vertical, 12).background(Color.blue.opacity(0.08)).cornerRadius(12)
     }
 }
 
 struct InfoRow: View {
-    var title: String
-    var value: String
+    var title: String; var value: String
     var body: some View {
-        HStack {
-            Text(title).foregroundColor(.secondary)
-            Spacer()
-            Text(value).fontWeight(.medium)
-        }
-        .font(.system(size: 15))
+        HStack { Text(title).foregroundColor(.secondary); Spacer(); Text(value).fontWeight(.medium) }.font(.system(size: 15))
     }
 }
