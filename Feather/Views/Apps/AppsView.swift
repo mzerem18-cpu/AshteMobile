@@ -4,6 +4,7 @@ import Combine
 
 struct AppsView: View {
     @StateObject private var viewModel = AppsViewModel()
+    @State private var selectedApp: RemoteApp?
     
     var body: some View {
         NavigationView {
@@ -19,7 +20,10 @@ struct AppsView: View {
                     }
                 } else {
                     List(viewModel.apps) { app in
-                        AppRowView(app: app)
+                        AppRowView(app: app) {
+                            // کاتێک کلیک لە GET دەکرێت، پەردە شازەکە دەکاتەوە
+                            self.selectedApp = app
+                        }
                     }
                     .listStyle(InsetGroupedListStyle())
                 }
@@ -28,22 +32,64 @@ struct AppsView: View {
             .onAppear {
                 if viewModel.apps.isEmpty { viewModel.fetchApps() }
             }
+            // پەردەی داونلۆد و ئینستاڵکردنەکە
+            .sheet(item: $selectedApp) { app in
+                AppInstallSheetView(app: app)
+                    .presentationDetents([.height(290)])
+            }
         }
     }
 }
 
+// دیزاینی بەرنامەکان (تەنها دوگمەی GETی تێدایە)
 struct AppRowView: View {
     var app: RemoteApp
+    var onInstall: () -> Void
+    
+    var body: some View {
+        HStack(spacing: 15) {
+            AsyncImage(url: app.fullIconURL) { image in
+                image.resizable().aspectRatio(contentMode: .fit)
+            } placeholder: {
+                Color.gray.opacity(0.2)
+            }
+            .frame(width: 60, height: 60)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(app.name).font(.system(size: 16, weight: .bold))
+                Text(app.version ?? "Unknown")
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+            
+            Button(action: onInstall) {
+                Text("GET")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.blue)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 7)
+                    .background(Color.blue.opacity(0.1))
+                    .clipShape(Capsule())
+            }
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+// 🔥 پەردە ڕاستەقینەکە کە داونلۆد و Sign و Install دەکات
+struct AppInstallSheetView: View {
+    var app: RemoteApp
+    
+    @State private var progress: Double = 0.0
+    @State private var isCompleted: Bool = false
+    @State private var statusText: String = "Connecting..."
+    @State private var stepText: String = "Preparing"
+    @State private var hasStartedDownload = false
     
     @ObservedObject var downloadManager = DownloadManager.shared
-    @State private var currentDownload: Download? = nil
-    @State private var isSigning = false
-    
-    @State private var progress: Double = 0
-    @State private var bytesDownloaded: Int64 = 0
-    @State private var totalBytes: Int64 = 0
-    @State private var unpackageProgress: Double = 0
-    
     let timer = Timer.publish(every: 0.2, on: .main, in: .common).autoconnect()
     
     @FetchRequest(
@@ -57,140 +103,140 @@ struct AppRowView: View {
         sortDescriptors: [NSSortDescriptor(keyPath: \CertificatePair.date, ascending: false)],
         animation: .snappy
     ) private var certificates: FetchedResults<CertificatePair>
-
-    var overallProgress: Double {
-        if let dl = currentDownload {
-            return dl.onlyArchiving ? unpackageProgress : (0.3 * unpackageProgress) + (0.7 * progress)
-        }
-        return 0
-    }
-
-    var statusText: String {
-        if totalBytes > 0 {
-            let mbDownloaded = Double(bytesDownloaded) / 1048576.0
-            let mbTotal = Double(totalBytes) / 1048576.0
-            return String(format: "%.1f MB / %.1f MB", mbDownloaded, mbTotal)
-        } else if bytesDownloaded > 0 {
-            let mbDownloaded = Double(bytesDownloaded) / 1048576.0
-            return String(format: "%.1f MB", mbDownloaded)
-        }
-        return "Starting..."
-    }
-
+    
     var body: some View {
-        HStack(spacing: 15) {
-            AsyncImage(url: app.fullIconURL) { image in
-                image.resizable().aspectRatio(contentMode: .fit)
-            } placeholder: {
-                Color.gray.opacity(0.2)
-            }
-            .frame(width: 60, height: 60)
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(app.name).font(.system(size: 16, weight: .bold))
+        VStack(spacing: 20) {
+            HStack(spacing: 16) {
+                ZStack(alignment: .trailing) {
+                    AsyncImage(url: app.fullIconURL) { image in
+                        image.resizable().aspectRatio(contentMode: .fit)
+                    } placeholder: {
+                        Color.gray.opacity(0.3)
+                    }
+                    .frame(width: 70, height: 70)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+                }
                 
-                if currentDownload != nil {
-                    Text(statusText)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(.blue)
-                        .contentTransition(.numericText())
-                } else if isSigning {
-                    Text("Signing...")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(.orange)
-                } else {
-                    Text(app.version ?? "Unknown")
-                        .font(.system(size: 12))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(isCompleted ? "Install Complete" : statusText)
+                        .font(.system(size: 20, weight: .heavy, design: .rounded))
+                        .foregroundColor(.primary)
+                    
+                    Text(app.name)
+                        .font(.system(size: 15, weight: .bold))
                         .foregroundColor(.secondary)
+                    
+                    HStack(spacing: 4) {
+                        Image(systemName: isCompleted ? "checkmark.square.fill" : "arrow.down.circle.fill")
+                            .font(.system(size: 12))
+                        Text(isCompleted ? "Completed" : stepText)
+                            .font(.system(size: 13, weight: .bold))
+                    }
+                    .foregroundColor(isCompleted ? .teal : .blue)
+                    .padding(.top, 2)
                 }
+                Spacer()
             }
             
-            Spacer()
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.primary.opacity(0.08))
+                    Capsule()
+                        .fill(LinearGradient(colors: isCompleted ? [.blue, .cyan] : [.blue, .purple], startPoint: .leading, endPoint: .trailing))
+                        .frame(width: geo.size.width * CGFloat(progress))
+                        .shadow(color: isCompleted ? Color.cyan.opacity(0.4) : Color.blue.opacity(0.4), radius: 6, x: 0, y: 0)
+                        .animation(.spring(response: 0.5, dampingFraction: 0.8), value: progress)
+                }
+            }
+            .frame(height: 8)
             
-            Button(action: {
-                if currentDownload == nil && !isSigning {
-                    startNativeDownloadAndSign()
-                }
-            }) {
-                ZStack {
-                    if currentDownload != nil || isSigning {
-                        Circle()
-                            .stroke(Color.gray.opacity(0.2), lineWidth: 3)
-                            .frame(width: 28, height: 28)
-                        
-                        Circle()
-                            .trim(from: 0, to: isSigning ? 1.0 : overallProgress)
-                            .stroke(isSigning ? Color.orange : Color.blue, lineWidth: 3)
-                            .frame(width: 28, height: 28)
-                            .rotationEffect(.degrees(-90))
-                            .animation(.linear, value: overallProgress)
-                    } else {
-                        Text("GET")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(.blue)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 7)
-                            .background(Color.blue.opacity(0.1))
-                            .clipShape(Capsule())
-                    }
-                }
+            HStack {
+                Text("\(Int(progress * 100))%")
+                    .font(.system(size: 22, weight: .heavy, design: .rounded))
+                    .foregroundColor(isCompleted ? .teal : .blue)
+                Spacer()
+                Text(isCompleted ? "Ready to open" : "Keep AshteMobile open")
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundColor(.secondary)
             }
         }
-        .padding(.vertical, 4)
+        .padding(26)
+        .onAppear {
+            startNativeDownload()
+        }
         .onReceive(timer) { _ in
-            if let dl = currentDownload {
-                self.progress = dl.progress
-                self.bytesDownloaded = dl.bytesDownloaded
-                self.totalBytes = dl.totalBytes
-                self.unpackageProgress = dl.unpackageProgress
-                
-                // کاتێک داونلۆد تەواو بوو
-                if !downloadManager.manualDownloads.contains(where: { $0 === dl }) {
-                    self.currentDownload = nil
-                    // دڵنیابوونەوە لەوەی کە بەڕاستی داونلۆد بووە
-                    if self.bytesDownloaded > 0 {
-                        startSigningLatestImportedApp()
-                    } else {
-                        self.isSigning = false
-                    }
-                }
-            }
+            checkDownloadProgress()
         }
     }
     
-    func startNativeDownloadAndSign() {
-        let selectedIndex = UserDefaults.standard.integer(forKey: "ashtemobile.selectedCert")
-        guard certificates.indices.contains(selectedIndex) else { return }
-        
-        // 🔥 لێرەدا لینکی شکێنراوی ڕاستەقینە بەکاردەهێنین
-        guard let url = app.actualDownloadURL else { return }
+    // فەنکشنی کردنەوەی کۆدی Base64 بۆ لینکی ڕاستەقینە بێ دەستکاریکردنی مۆدێل
+    func getRealURL(from urlString: String) -> URL? {
+        if let data = Data(base64Encoded: urlString),
+           let decoded = String(data: data, encoding: .utf8),
+           let url = URL(string: decoded) {
+            return url
+        }
+        return URL(string: urlString)
+    }
+    
+    func startNativeDownload() {
+        guard let url = getRealURL(from: app.downloadURL) else {
+            statusText = "Invalid URL"
+            stepText = "Error"
+            return
+        }
         let id = "AshteMobileStore_\(UUID().uuidString)"
+        _ = downloadManager.startDownload(from: url, id: id)
+    }
+    
+    func checkDownloadProgress() {
+        if isCompleted { return }
         
-        if let dl = downloadManager.startDownload(from: url, id: id) as? Download {
-            self.currentDownload = dl
-        } else {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                if let lastDL = downloadManager.manualDownloads.last {
-                    self.currentDownload = lastDL
-                }
+        // سەیر دەکات بزانێت داونلۆد لەناو مەنەجەرەکەدا ماوە یان نا
+        if let dl = downloadManager.manualDownloads.first {
+            hasStartedDownload = true
+            statusText = "Downloading..."
+            
+            let overall = dl.onlyArchiving ? dl.unpackageProgress : (0.3 * dl.unpackageProgress) + (0.7 * dl.progress)
+            self.progress = overall * 0.8 // داونلۆد ٨٠٪ی هێڵەکە دەگرێت
+            
+            if dl.totalBytes > 0 {
+                let mbDownloaded = Double(dl.bytesDownloaded) / 1048576.0
+                let mbTotal = Double(dl.totalBytes) / 1048576.0
+                self.stepText = String(format: "%.1f MB / %.1f MB", mbDownloaded, mbTotal)
+            } else {
+                self.stepText = "Fetching files..."
             }
+        } else if hasStartedDownload {
+            // ئەگەر داونلۆد دیار نەما و پێشتر دەستی پێکردبوو، واتە تەواو بووە!
+            hasStartedDownload = false
+            startSigning()
         }
     }
     
-    func startSigningLatestImportedApp() {
+    func startSigning() {
+        self.statusText = "Signing App..."
+        self.stepText = "Applying Certificate"
+        withAnimation { self.progress = 0.9 } // دەبێتە ٩٠٪
+        
         let selectedIndex = UserDefaults.standard.integer(forKey: "ashtemobile.selectedCert")
-        guard certificates.indices.contains(selectedIndex) else { return }
+        guard certificates.indices.contains(selectedIndex) else {
+            self.statusText = "Error"
+            self.stepText = "No Certificate Selected"
+            return
+        }
         let cert = certificates[selectedIndex]
         
-        isSigning = true
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+        // چاوەڕێ دەکەین یەک چرکە تا فایلەکە دەچێتە ناو داتابەیس
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             guard let latestApp = importedApps.first else {
-                isSigning = false
+                self.statusText = "Error"
+                self.stepText = "Failed to locate app"
                 return
             }
             
+            // مۆرکردنی ڕاستەقینە بەبێ ئێرۆر!
             FR.signPackageFile(
                 latestApp,
                 using: OptionsManager.shared.options,
@@ -198,11 +244,16 @@ struct AppRowView: View {
                 certificate: cert
             ) { signError in
                 DispatchQueue.main.async {
-                    if signError == nil {
+                    if let error = signError {
+                        self.statusText = "Sign Error"
+                        self.stepText = error.localizedDescription
+                    } else {
+                        // گەیشتە ١٠٠٪ و نامەی ئینستاڵی نارد
+                        withAnimation { self.progress = 1.0 }
+                        self.isCompleted = true
+                        self.statusText = "Install Complete"
+                        self.stepText = "Completed"
                         NotificationCenter.default.post(name: NSNotification.Name("AshteMobile.installApp"), object: nil)
-                    }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                        isSigning = false
                     }
                 }
             }
