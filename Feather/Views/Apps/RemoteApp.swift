@@ -14,10 +14,19 @@ struct RemoteApp: Codable, Identifiable {
         return hack?.joined(separator: " • ")
     }
     
-    // 💡 ئەمە وێنەکان چاک دەکات بە لکاندنی لینکی سایتەکەت
     var fullIconURL: URL? {
         guard let path = iconURL else { return nil }
         return URL(string: "https://ashtemobile.site/\(path)")
+    }
+    
+    // 🔥 چارەسەری کێشەکە: ئەمە کۆدی Base64 دەکاتەوە بە لینکی ڕاستەقینەی داونلۆد
+    var actualDownloadURL: URL? {
+        if let data = Data(base64Encoded: downloadURL),
+           let decodedString = String(data: data, encoding: .utf8),
+           let url = URL(string: decodedString) {
+            return url
+        }
+        return URL(string: downloadURL)
     }
     
     enum CodingKeys: String, CodingKey {
