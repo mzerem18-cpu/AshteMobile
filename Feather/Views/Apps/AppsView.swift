@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreData
 
 struct AppsView: View {
     @StateObject private var viewModel = AppsViewModel()
@@ -40,14 +41,14 @@ struct AppsView: View {
     }
 }
 
-// دیزاینی یارییەکان لە لیستەکەدا
 struct AppRowView: View {
     var app: RemoteApp
     var onInstall: () -> Void
     
     var body: some View {
         HStack(spacing: 15) {
-            AsyncImage(url: URL(string: app.iconURL ?? "")) { image in
+            // 💡 لێرەدا fullIconURL بەکارهێنراوە بۆ دەرکەوتنی وێنەکان
+            AsyncImage(url: app.fullIconURL) { image in
                 image.resizable().aspectRatio(contentMode: .fit)
             } placeholder: {
                 Color.gray.opacity(0.3).overlay(Image(systemName: "app.dashed").foregroundColor(.gray))
@@ -76,18 +77,31 @@ struct AppRowView: View {
     }
 }
 
-// دیزاینە شازەکەی Ksign بە سەربەخۆیی (بۆ ئەوەی ئێرۆر نەدات)
+// پەردەی Signکردنی ڕاستەقینە
 struct AppInstallSheetView: View {
     var app: RemoteApp
     @State private var progress: Double = 0.0
     @State private var isCompleted: Bool = false
     @State private var statusText: String = "Preparing Install"
     
+    // 💡 هێنانی بڕوانامەکان بە هەمان شێوازی SigningViewـەکەی خۆت
+    @FetchRequest(
+        entity: CertificatePair.entity(),
+        sortDescriptors: [NSSortDescriptor(keyPath: \CertificatePair.date, ascending: false)],
+        animation: .snappy
+    ) private var certificates: FetchedResults<CertificatePair>
+    
+    private func selectedCert() -> CertificatePair? {
+        let index = UserDefaults.standard.integer(forKey: "ashtemobile.selectedCert")
+        guard certificates.indices.contains(index) else { return nil }
+        return certificates[index]
+    }
+    
     var body: some View {
         VStack(spacing: 20) {
             HStack(spacing: 16) {
                 ZStack(alignment: .trailing) {
-                    AsyncImage(url: URL(string: app.iconURL ?? "")) { image in
+                    AsyncImage(url: app.fullIconURL) { image in
                         image.resizable().aspectRatio(contentMode: .fit)
                     } placeholder: {
                         Color.gray.opacity(0.3)
@@ -150,22 +164,79 @@ struct AppInstallSheetView: View {
         }
         .padding(22)
         .onAppear {
-            startSimulation()
+            startRealDownloadAndSign()
         }
     }
     
-    // لێرەدا دواتر کۆدی Sign کردنەکەی خۆت دادەنێین، ئێستا تەنها ئەنیمەیشنە
-    func startSimulation() {
-        statusText = "Downloading..."
-        withAnimation(.linear(duration: 2.0)) { progress = 0.5 }
+    func startRealDownloadAndSign() {
+        guard let url = URL(string: app.downloadURL) else {
+            statusText = "Invalid URL"
+            return
+        }
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            statusText = "Signing with certificate..."
-            withAnimation(.linear(duration: 2.0)) { progress = 1.0 }
+        statusText = "Downloading..."
+        withAnimation(.linear(duration: 2.0)) { progress = 0.5 } // ئەنیمەیشنی داونلۆد
+        
+        // ١. داونلۆدکردنی فایلی IPA
+        let task = URLSession.shared.downloadTask(with: url) { localURL, response, error in
+            guard let localURL = localURL, error == nil else {
+                DispatchQueue.main.async { statusText = "Download Failed" }
+                return
+            }
             
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                isCompleted = true
+            // ٢. دانانی فایلەکە لە شوێنێکی سەلامەت بۆ Sign
+            let fm = FileManager.default
+            let tempIpaURL = fm.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).ipa")
+            try? fm.removeItem(at: tempIpaURL)
+            try? fm.moveItem(at: localURL, to: tempIpaURL)
+            
+            DispatchQueue.main.async {
+                self.statusText = "Signing..."
+                withAnimation(.linear(duration: 1.0)) { self.progress = 0.8 }
+                
+                // ٣. دۆزینەوەی بڕوانامەکە
+                guard let cert = self.selectedCert() else {
+                    self.statusText = "No Certificate Found!"
+                    return
+                }
+                
+                // ٤. دروستکردنی ئۆبجێکتەکە بۆ فەنکشنەکەی خۆت
+                let downloadedApp = RemoteDownloadedApp(url: tempIpaURL, name: app.name, version: app.version)
+                
+                // ٥. بانگکردنی فەنکشنی ڕاستەقینەی Sign لە پڕۆژەکەی خۆت
+                FR.signPackageFile(
+                    downloadedApp,
+                    using: OptionsManager.shared.options,
+                    icon: nil,
+                    certificate: cert
+                ) { signError in
+                    DispatchQueue.main.async {
+                        if let signError = signError {
+                            self.statusText = "Sign Error: \(signError.localizedDescription)"
+                        } else {
+                            self.statusText = "Sending Manifest..."
+                            withAnimation(.linear(duration: 0.5)) { self.progress = 1.0 }
+                            
+                            // ٦. فەرمانی Install بۆ ئایفۆن
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                self.isCompleted = true
+                                NotificationCenter.default.post(name: Notification.Name("AshteMobile.installApp"), object: nil)
+                            }
+                        }
+                    }
+                }
             }
         }
+        task.resume()
     }
+}
+
+// مۆدێلێکی یارمەتیدەر بۆ ئەوەی FR.signPackageFile بتوانێت IPAـیەکە بخوێنێتەوە
+struct RemoteDownloadedApp: AppInfoPresentable {
+    var url: URL
+    var name: String?
+    var identifier: String? = nil
+    var version: String?
+    var isSigned: Bool { return false }
+    var iconData: Data? { return nil }
 }
