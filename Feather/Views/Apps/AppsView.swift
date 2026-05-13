@@ -1,5 +1,6 @@
 import SwiftUI
 import CoreData
+import Foundation
 
 struct AppsView: View {
     @StateObject private var viewModel = AppsViewModel()
@@ -33,11 +34,13 @@ struct AppsView: View {
 
 struct AppRowView: View {
     var app: RemoteApp
-    @State private var isProcessing = false
-    @State private var progress: Double = 0.0
-    @State private var statusText: String = ""
     
-    // هێنانی شەهادەکان لە داتابەیسی بەرنامەکەت
+    // کۆنترۆڵکەری داونلۆد کە قەبارە (MB) دەخوێنێتەوە
+    @StateObject private var downloader = AppDownloader()
+    @State private var isSigning = false
+    @State private var signingProgress = 0.0
+    
+    // هێنانی شەهادەکان لەناو داتابەیس
     @FetchRequest(
         entity: CertificatePair.entity(),
         sortDescriptors: [NSSortDescriptor(keyPath: \CertificatePair.date, ascending: false)],
@@ -56,19 +59,40 @@ struct AppRowView: View {
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(app.name).font(.system(size: 16, weight: .bold))
-                Text(isProcessing ? statusText : (app.version ?? "Unknown Version"))
-                    .font(.system(size: 12))
-                    .foregroundColor(isProcessing ? .blue : .secondary)
+                
+                // لێرەدا ڕاستەوخۆ مێگابایتەکانی داونلۆد نیشان دەدات!
+                if downloader.isDownloading {
+                    Text(downloader.statusText)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.blue)
+                } else if isSigning {
+                    Text("Signing...")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.orange)
+                } else {
+                    Text(app.version ?? "Unknown")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                }
             }
             
             Spacer()
             
-            Button(action: { if !isProcessing { startRealInstall() } }) {
+            Button(action: {
+                if !downloader.isDownloading && !isSigning {
+                    startProcess()
+                }
+            }) {
                 ZStack {
-                    if isProcessing {
+                    if downloader.isDownloading || isSigning {
                         Circle()
-                            .trim(from: 0, to: progress)
-                            .stroke(Color.blue, lineWidth: 3)
+                            .stroke(Color.gray.opacity(0.2), lineWidth: 3)
+                            .frame(width: 28, height: 28)
+                        
+                        Circle()
+                            // ڕەنگی شین بۆ داونلۆد، ڕەنگی پرتەقاڵی بۆ Sign
+                            .trim(from: 0, to: isSigning ? signingProgress : downloader.progress)
+                            .stroke(isSigning ? Color.orange : Color.blue, lineWidth: 3)
                             .frame(width: 28, height: 28)
                             .rotationEffect(.degrees(-90))
                     } else {
@@ -86,73 +110,123 @@ struct AppRowView: View {
         .padding(.vertical, 4)
     }
     
-    // 🔥 فەنکشنی مۆرکردن و ئینستاڵکردنی ڕاستەقینە
-    func startRealInstall() {
-        // ١. دۆزینەوەی ئەو شەهادەیەی بەکارهێنەر دیاری کردووە
+    // پرۆسەی سەرەکی (داونلۆد -> مۆرکردن -> ئینستاڵ)
+    func startProcess() {
         let selectedIndex = UserDefaults.standard.integer(forKey: "ashtemobile.selectedCert")
-        guard certificates.indices.contains(selectedIndex) else {
-            // ئەگەر شەهادەی نەبوو، هیچ مەکە
-            return
-        }
+        guard certificates.indices.contains(selectedIndex) else { return }
         let cert = certificates[selectedIndex]
         
         guard let url = URL(string: app.downloadURL) else { return }
         
-        isProcessing = true
-        statusText = "Downloading..."
-        progress = 0.1
-        
-        // ٢. داونلۆدکردنی فایلی IPA
-        URLSession.shared.downloadTask(with: url) { localURL, response, error in
-            guard let localURL = localURL, error == nil else {
-                DispatchQueue.main.async { isProcessing = false }
-                return
-            }
+        // ١. دەستپێکردنی داونلۆد بە خوێندنەوەی قەبارە (MB)
+        downloader.download(url: url, sizeStr: app.size ?? "Unknown") { localURL in
+            guard let localURL = localURL else { return }
             
-            // گواستنەوەی فایل بۆ فۆڵدەرێکی کاتی
-            let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".ipa")
-            try? FileManager.default.moveItem(at: localURL, to: tempURL)
+            isSigning = true
+            withAnimation { signingProgress = 0.5 }
             
-            DispatchQueue.main.async {
-                statusText = "Signing..."
-                progress = 0.6
-                
-                // ٣. مۆرکردنی فایلەکە بە فەنکشنی ئەسڵی بەرنامەکەت
-                let downloadedApp = RemoteDownloadedApp(url: tempURL, name: app.name, version: app.version)
-                
-                FR.signPackageFile(
-                    downloadedApp,
-                    using: OptionsManager.shared.options,
-                    icon: nil,
-                    certificate: cert
-                ) { signError in
-                    DispatchQueue.main.async {
-                        if signError == nil {
-                            progress = 1.0
-                            statusText = "Installing..."
-                            
-                            // ٤. ناردنی نۆتیفیکەیشنی ئینستاڵ (کە پەنجەرەی ئەپڵ دەهێنێت)
-                            NotificationCenter.default.post(name: NSNotification.Name("AshteMobile.installApp"), object: nil)
-                        }
-                        
-                        // دوای ٥ چرکە دوگمەکە ئاسایی بکەرەوە
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
-                            isProcessing = false
-                            progress = 0
-                        }
+            // ٢. دروستکردنی مۆدێلە ڕاستەقینەکە بێ ئێرۆر
+            let downloadedApp = RemoteDownloadedApp(
+                uuid: UUID().uuidString,
+                name: app.name,
+                version: app.version,
+                identifier: nil,
+                minOSVersion: nil,
+                url: localURL,
+                iconData: nil,
+                isSigned: false
+            )
+            
+            // ٣. مۆرکردنی ڕاستەقینە بە شەهادەکە
+            FR.signPackageFile(
+                downloadedApp,
+                using: OptionsManager.shared.options,
+                icon: nil,
+                certificate: cert
+            ) { signError in
+                DispatchQueue.main.async {
+                    withAnimation { signingProgress = 1.0 }
+                    
+                    if signError == nil {
+                        // ٤. ناردنی فەرمانی Install بۆ ئایفۆن!
+                        NotificationCenter.default.post(name: NSNotification.Name("AshteMobile.installApp"), object: nil)
+                    }
+                    
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                        isSigning = false
+                        signingProgress = 0.0
                     }
                 }
             }
-        }.resume()
+        }
     }
 }
 
-// مۆدێلێکی یارمەتیدەر بۆ ئەوەی لەگەڵ پڕۆژەکەت بگونجێت
+// MARK: - سیستەمی داونلۆدی ڕاستەقینە بۆ خوێندنەوەی MB
+class AppDownloader: NSObject, ObservableObject, URLSessionDownloadDelegate {
+    @Published var progress: Double = 0.0
+    @Published var statusText: String = ""
+    @Published var isDownloading = false
+    
+    var completion: ((URL?) -> Void)?
+    var expectedSize: String = ""
+    
+    func download(url: URL, sizeStr: String, completion: @escaping (URL?) -> Void) {
+        self.completion = completion
+        self.expectedSize = sizeStr
+        self.isDownloading = true
+        self.progress = 0.0
+        self.statusText = "0 MB / \(sizeStr)"
+        
+        let session = URLSession(configuration: .default, delegate: self, delegateQueue: .main)
+        session.downloadTask(with: url).resume()
+    }
+    
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
+        DispatchQueue.main.async {
+            let mbWritten = Double(totalBytesWritten) / 1048576.0
+            
+            if totalBytesExpectedToWrite > 0 {
+                self.progress = Double(totalBytesWritten) / Double(totalBytesExpectedToWrite)
+                self.statusText = String(format: "%.1f MB / %@", mbWritten, self.expectedSize)
+            } else {
+                // ئەگەر قەبارەی کۆتایی نەزاندرا، تەنها MB دابەزیوەکە نیشان دەدات
+                self.statusText = String(format: "%.1f MB / %@", mbWritten, self.expectedSize)
+                self.progress += 0.01
+                if self.progress > 0.9 { self.progress = 0.1 }
+            }
+        }
+    }
+    
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".ipa")
+        try? FileManager.default.moveItem(at: location, to: tempURL)
+        
+        DispatchQueue.main.async {
+            self.isDownloading = false
+            self.completion?(tempURL)
+        }
+    }
+    
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        if let _ = error {
+            DispatchQueue.main.async {
+                self.statusText = "Error!"
+                self.isDownloading = false
+                self.completion?(nil)
+            }
+        }
+    }
+}
+
+// MARK: - مۆدێلی تەواو (بۆ ئەوەی هەرگیز Error 65 نەداتەوە)
 struct RemoteDownloadedApp: AppInfoPresentable {
-    var url: URL
+    var uuid: String?
     var name: String?
-    var identifier: String? = nil
     var version: String?
-    var isSigned: Bool { return false }
-    var iconData: Data? { return nil }
+    var identifier: String?
+    var minOSVersion: String?
+    var url: URL?
+    var iconData: Data?
+    var isSigned: Bool
 }
