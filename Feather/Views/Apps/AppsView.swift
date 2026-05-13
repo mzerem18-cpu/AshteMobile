@@ -1,6 +1,8 @@
 import SwiftUI
 import CoreData
 import Combine
+import NimbleViews
+import NimbleExtensions
 
 struct AppsView: View {
     @StateObject private var viewModel = AppsViewModel()
@@ -21,7 +23,6 @@ struct AppsView: View {
                 } else {
                     List(viewModel.apps) { app in
                         AppRowView(app: app) {
-                            // کاتێک کلیک لە GET دەکرێت، پەردە شازەکە دەکاتەوە
                             self.selectedApp = app
                         }
                     }
@@ -32,7 +33,6 @@ struct AppsView: View {
             .onAppear {
                 if viewModel.apps.isEmpty { viewModel.fetchApps() }
             }
-            // پەردەی داونلۆد و ئینستاڵکردنەکە
             .sheet(item: $selectedApp) { app in
                 AppInstallSheetView(app: app)
                     .presentationDetents([.height(290)])
@@ -41,7 +41,6 @@ struct AppsView: View {
     }
 }
 
-// دیزاینی بەرنامەکان (تەنها دوگمەی GETی تێدایە)
 struct AppRowView: View {
     var app: RemoteApp
     var onInstall: () -> Void
@@ -79,7 +78,6 @@ struct AppRowView: View {
     }
 }
 
-// 🔥 پەردە ڕاستەقینەکە کە داونلۆد و Sign و Install دەکات
 struct AppInstallSheetView: View {
     var app: RemoteApp
     
@@ -170,20 +168,11 @@ struct AppInstallSheetView: View {
         }
     }
     
-    // فەنکشنی کردنەوەی کۆدی Base64 بۆ لینکی ڕاستەقینە بێ دەستکاریکردنی مۆدێل
-    func getRealURL(from urlString: String) -> URL? {
-        if let data = Data(base64Encoded: urlString),
-           let decoded = String(data: data, encoding: .utf8),
-           let url = URL(string: decoded) {
-            return url
-        }
-        return URL(string: urlString)
-    }
-    
     func startNativeDownload() {
-        guard let url = getRealURL(from: app.downloadURL) else {
+        // 🔥 لێرەدا لینکی ڕاستەقینە بێ کێشە بەکاردێت
+        guard let url = app.actualDownloadURL else {
             statusText = "Invalid URL"
-            stepText = "Error"
+            stepText = "Error in App Link"
             return
         }
         let id = "AshteMobileStore_\(UUID().uuidString)"
@@ -193,13 +182,12 @@ struct AppInstallSheetView: View {
     func checkDownloadProgress() {
         if isCompleted { return }
         
-        // سەیر دەکات بزانێت داونلۆد لەناو مەنەجەرەکەدا ماوە یان نا
         if let dl = downloadManager.manualDownloads.first {
             hasStartedDownload = true
             statusText = "Downloading..."
             
             let overall = dl.onlyArchiving ? dl.unpackageProgress : (0.3 * dl.unpackageProgress) + (0.7 * dl.progress)
-            self.progress = overall * 0.8 // داونلۆد ٨٠٪ی هێڵەکە دەگرێت
+            self.progress = overall * 0.8 // هێڵەکە تا ٨٠٪ دەڕوات بۆ داونلۆد
             
             if dl.totalBytes > 0 {
                 let mbDownloaded = Double(dl.bytesDownloaded) / 1048576.0
@@ -209,16 +197,15 @@ struct AppInstallSheetView: View {
                 self.stepText = "Fetching files..."
             }
         } else if hasStartedDownload {
-            // ئەگەر داونلۆد دیار نەما و پێشتر دەستی پێکردبوو، واتە تەواو بووە!
             hasStartedDownload = false
-            startSigning()
+            startSigning() // داونلۆد تەواو بوو، دەست دەکات بە Sign
         }
     }
     
     func startSigning() {
         self.statusText = "Signing App..."
         self.stepText = "Applying Certificate"
-        withAnimation { self.progress = 0.9 } // دەبێتە ٩٠٪
+        withAnimation { self.progress = 0.9 } // هێڵەکە دەبێتە ٩٠٪
         
         let selectedIndex = UserDefaults.standard.integer(forKey: "ashtemobile.selectedCert")
         guard certificates.indices.contains(selectedIndex) else {
@@ -228,15 +215,13 @@ struct AppInstallSheetView: View {
         }
         let cert = certificates[selectedIndex]
         
-        // چاوەڕێ دەکەین یەک چرکە تا فایلەکە دەچێتە ناو داتابەیس
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             guard let latestApp = importedApps.first else {
                 self.statusText = "Error"
-                self.stepText = "Failed to locate app"
+                self.stepText = "Failed to locate downloaded file"
                 return
             }
             
-            // مۆرکردنی ڕاستەقینە بەبێ ئێرۆر!
             FR.signPackageFile(
                 latestApp,
                 using: OptionsManager.shared.options,
@@ -248,7 +233,7 @@ struct AppInstallSheetView: View {
                         self.statusText = "Sign Error"
                         self.stepText = error.localizedDescription
                     } else {
-                        // گەیشتە ١٠٠٪ و نامەی ئینستاڵی نارد
+                        // 🚀 سەرکەوتوو بوو! نامەی ئینستاڵ دەنێرێت
                         withAnimation { self.progress = 1.0 }
                         self.isCompleted = true
                         self.statusText = "Install Complete"
