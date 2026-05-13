@@ -1,5 +1,4 @@
 import SwiftUI
-import NimbleViews
 
 struct AppsView: View {
     @StateObject private var viewModel = AppsViewModel()
@@ -66,10 +65,11 @@ struct AppsView: View {
     }
 }
 
-// MARK: - دیزاینی کاردەکان
+// MARK: - دیزاینی کاردەکانی دەرەوە
 struct AppCardView: View {
     var app: RemoteApp
     @State private var isAdded = false
+    @ObservedObject var downloadManager = DownloadManager.shared // 💡 ڕێک بە شێوازی بەرنامەکەی خۆت
     
     var body: some View {
         HStack(spacing: 15) {
@@ -102,9 +102,7 @@ struct AppCardView: View {
             Button(action: {
                 guard let url = app.actualDownloadURL else { return }
                 let id = "AshteMobileStore_\(UUID().uuidString)"
-                
-                // 🔥 بەبێ ناساندنی پێشوەختە ڕاستەوخۆ بانگی دەکەین بۆ ئەوەی ئێرۆر نەدات
-                _ = DownloadManager.shared.startDownload(from: url, id: id)
+                _ = downloadManager.startDownload(from: url, id: id)
                 
                 withAnimation { isAdded = true }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) { withAnimation { isAdded = false } }
@@ -131,6 +129,7 @@ struct AppCardView: View {
 struct AppDetailView: View {
     var app: RemoteApp
     @State private var isAdded = false
+    @ObservedObject var downloadManager = DownloadManager.shared // 💡 ڕێک بە شێوازی بەرنامەکەی خۆت
     
     var body: some View {
         ScrollView {
@@ -171,7 +170,7 @@ struct AppDetailView: View {
                             Button(action: {
                                 guard let url = app.actualDownloadURL else { return }
                                 let id = "AshteMobileStore_\(UUID().uuidString)"
-                                _ = DownloadManager.shared.startDownload(from: url, id: id)
+                                _ = downloadManager.startDownload(from: url, id: id)
                                 
                                 withAnimation { isAdded = true }
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) { withAnimation { isAdded = false } }
