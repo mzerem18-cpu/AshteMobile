@@ -8,4 +8,13 @@ struct RemoteApp: Codable, Identifiable {
     let iconURL: String?
     let downloadURL: String
     let description: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case name = "name"
+        case bundleIdentifier = "bundleID"
+        case version = "version"
+        case iconURL = "icon"
+        case downloadURL = "download"
+        case description = "description"
+    }
 }
