@@ -81,6 +81,19 @@ struct AppInstallSheetView: View {
     @State private var isCompleted: Bool = false
     @State private var statusText: String = "Preparing..."
     
+    // هێنانی بڕوانامەکان
+    @FetchRequest(
+        entity: CertificatePair.entity(),
+        sortDescriptors: [NSSortDescriptor(keyPath: \CertificatePair.date, ascending: false)],
+        animation: .snappy
+    ) private var certificates: FetchedResults<CertificatePair>
+    
+    private func _selectedCert() -> CertificatePair? {
+        let storedCert = UserDefaults.standard.integer(forKey: "ashtemobile.selectedCert")
+        guard certificates.indices.contains(storedCert) else { return nil }
+        return certificates[storedCert]
+    }
+    
     var body: some View {
         VStack(spacing: 20) {
             HStack(spacing: 16) {
@@ -91,7 +104,7 @@ struct AppInstallSheetView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(isCompleted ? "Ready to Install" : statusText)
+                    Text(isCompleted ? "Success!" : statusText)
                         .font(.system(size: 20, weight: .bold))
                     Text(app.name).foregroundColor(.secondary)
                 }
@@ -102,38 +115,77 @@ struct AppInstallSheetView: View {
                 .tint(isCompleted ? .green : .blue)
             
             if isCompleted {
-                Text("Please click 'Install' on the popup.")
+                Text("App m مۆرکرا و ئامادەیە بۆ ئینستاڵ")
                     .font(.caption).foregroundColor(.green)
             }
         }
         .padding(30)
-        .onAppear { startFlow() }
+        .onAppear { startRealSigningProcess() }
     }
     
-    func startFlow() {
-        statusText = "Downloading..."
-        withAnimation { progress = 0.4 }
+    // لێرەدا پرۆسەی مۆرکردنی ڕاستەقینە دەستپێدەکات
+    func startRealSigningProcess() {
+        guard let cert = _selectedCert() else {
+            statusText = "تکایە سەرەتا شەهادەیەک هەڵبژێرە"
+            return
+        }
         
-        // 💡 لێرەدا فایلی IPA داونلۆد دەکات و بانگی سیستەمی ئینستاڵکردنی ئایفۆن دەکات
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            statusText = "Signing..."
-            withAnimation { progress = 0.8 }
+        statusText = "Downloading IPA..."
+        progress = 0.1
+        
+        guard let url = URL(string: app.downloadURL) else { return }
+        
+        // ١. داونلۆدکردنی فایلەکە
+        URLSession.shared.downloadTask(with: url) { localURL, response, error in
+            guard let localURL = localURL else {
+                DispatchQueue.main.async { statusText = "Download Failed" }
+                return
+            }
             
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                withAnimation { progress = 1.0 }
-                isCompleted = true
-                statusText = "Complete!"
+            // دروستکردنی فۆڵدەرێکی کاتی
+            let fm = FileManager.default
+            let tempURL = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".ipa")
+            try? fm.moveItem(at: localURL, to: tempURL)
+            
+            DispatchQueue.main.async {
+                statusText = "Signing App..."
+                progress = 0.5
                 
-                // 🚀 ئەمە فەرمانی ئینستاڵکردنە (itms-services)
-                // تێبینی: بەکارهێنانی لینکی ڕاستەوخۆی plist یان بانگکردنی Notification
-                // باشترین ڕێگە بۆ پڕۆژەکەی تۆ ناردنی ئەم نۆتیفیکەیشنەیە:
-                NotificationCenter.default.post(name: NSNotification.Name("AshteMobile.installApp"), object: nil)
+                // ٢. دروستکردنی ئۆبجێکتی ئەپ بۆ مۆرکردن
+                // تێبینی: دەبێت RemoteDownloadedApp کە پێشتر دروستمان کرد لێرەدا بەکاربێت
+                let downloadedApp = RemoteDownloadedApp(url: tempURL, name: app.name, version: app.version)
                 
-                // ئەگەر نۆتیفیکەیشنەکە ئیشی نەکرد، ئەمە ڕێگە ڕاستەوخۆکەیە:
-                if let url = URL(string: "itms-services://?action=download-manifest&url=https://ashtemobile.site/manifest/\(app.name).plist") {
-                    UIApplication.shared.open(url)
+                // ٣. بانگکردنی فەنکشنی مۆرکردنی ڕاستەقینەی بەرنامەکەت
+                FR.signPackageFile(
+                    downloadedApp,
+                    using: OptionsManager.shared.options,
+                    icon: nil,
+                    certificate: cert
+                ) { error in
+                    DispatchQueue.main.async {
+                        if let error = error {
+                            statusText = "Error: \(error.localizedDescription)"
+                        } else {
+                            progress = 1.0
+                            isCompleted = true
+                            statusText = "Signed Successfully"
+                            
+                            // ٤. ناردنی نۆتیفیکەیشنی ئینستاڵکردن بۆ ئەوەی پەنجەرەی ئایفۆن دەرکەوێت
+                            NotificationCenter.default.post(name: NSNotification.Name("AshteMobile.installApp"), object: nil)
+                        }
+                    }
                 }
             }
-        }
+        }.resume()
     }
+}
+
+// پێویستە ئەم مۆدێلە لە خوارەوەی هەمان فایل بێت
+struct RemoteDownloadedApp: AppInfoPresentable {
+    var url: URL
+    var name: String?
+    var identifier: String? = nil
+    var version: String?
+    var isSigned: Bool { return false }
+    var iconData: Data? { return nil }
 }
