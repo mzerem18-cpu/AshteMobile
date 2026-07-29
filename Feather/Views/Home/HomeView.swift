@@ -3,7 +3,7 @@
 //  AshteMobile
 //
 //  Created for AshteMobile
-//  Modified to download IPA and redirect to Library
+//  Modified to redirect downloads to external website
 //
 
 import SwiftUI
@@ -21,7 +21,7 @@ struct HomeApp: Codable, Identifiable {
     let size: String?
     let developer: String?
     let bundle: String?
-    let url: String // پێویستە ئەمە لینکی ڕاستەوخۆی فایلە IPA یەکە بێت
+    let url: String
     let status: String?
     let banner: String?
     let hack: [String]?
@@ -44,7 +44,6 @@ struct HomeApp: Codable, Identifiable {
 // MARK: - Main Home View
 struct HomeView: View {
     @State private var apps: [HomeApp] = []
-    @State private var isDownloading: Bool = false
     
     // --- بەشی وێنە لاکێشەییەکان ---
     @State private var currentBanner = 0
@@ -126,13 +125,11 @@ struct HomeView: View {
                                         LazyHStack(spacing: 16) {
                                             ForEach(categoryApps) { app in
                                                 Button(action: {
-                                                    // گۆڕدرا بۆ داونلۆدکردنی IPA ڕاستەوخۆ
-                                                    downloadIPA(app: app)
+                                                    openWebsite()
                                                 }) {
                                                     HomeAppCardView(app: app)
                                                 }
                                                 .buttonStyle(.plain)
-                                                .disabled(isDownloading)
                                             }
                                         }
                                         .padding(.horizontal, 20)
@@ -157,72 +154,16 @@ struct HomeView: View {
             .onAppear {
                 Task { await loadApps() }
             }
-            
-            // نیشاندەری داونلۆدکردن (Loading)
-            if isDownloading {
-                Color.black.opacity(0.4).ignoresSafeArea()
-                VStack {
-                    ProgressView("Downloading...")
-                        .padding()
-                        .background(Color(UIColor.systemBackground))
-                        .cornerRadius(12)
-                        .shadow(radius: 10)
-                }
-            }
         }
     }
     
-    // 💡 فەنکشنی نوێ بۆ داونلۆدکردنی فایلی IPA و گواستنەوەی بۆ بەشی Library
-    private func downloadIPA(app: HomeApp) {
+    // 💡 فەنکشنی کردنەوەی وێبسایتەکە
+    private func openWebsite() {
         let generator = UIImpactFeedbackGenerator(style: .medium)
         generator.impactOccurred()
         
-        guard let downloadURL = URL(string: app.url) else {
-            print("Invalid URL")
-            return
-        }
-        
-        isDownloading = true
-        
-        Task {
-            do {
-                // داونلۆدکردنی فایلەکە
-                let (tempLocalUrl, _) = try await URLSession.shared.download(from: downloadURL)
-                
-                // دۆزینەوەی شوێنی سەیڤکردن (Documents Directory)
-                let fileManager = FileManager.default
-                let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
-                
-                // دروستکردنی ناوی فایلەکە
-                let sanitizedName = app.name.replacingOccurrences(of: " ", with: "_")
-                let destinationURL = documentsURL.appendingPathComponent("\(sanitizedName).ipa")
-                
-                // ئەگەر فایلەکە پێشتر هەبێت، بیسڕەوە
-                if fileManager.fileExists(atPath: destinationURL.path) {
-                    try fileManager.removeItem(at: destinationURL)
-                }
-                
-                // گواستنەوەی فایلەکە بۆ ناو مۆبایلەکە
-                try fileManager.moveItem(at: tempLocalUrl, to: destinationURL)
-                
-                DispatchQueue.main.async {
-                    self.isDownloading = false
-                    print("Successfully saved to: \(destinationURL.path)")
-                    
-                    // ناردنی ئاگادارکردنەوە (Notification) بۆ ئەوەی تابەکە بگۆڕێت بۆ بەشی Library
-                    // پێویستە لە فایلەکەی تری (MainTabView) ئەکشنێک دابنێیت کە ئەم Notification وەربگرێت و تابەکە بگۆڕێت
-                    NotificationCenter.default.post(name: NSNotification.Name("SwitchToLibraryTab"), object: nil)
-                    
-                    // ناردنی ئاگادارکردنەوە بۆ ڕیفرێشکردنی بەشی Library
-                    NotificationCenter.default.post(name: NSNotification.Name("RefreshLibrary"), object: nil)
-                }
-                
-            } catch {
-                DispatchQueue.main.async {
-                    self.isDownloading = false
-                    print("Error downloading IPA: \(error.localizedDescription)")
-                }
-            }
+        if let url = URL(string: "https://ashtemobile.site") {
+            UIApplication.shared.open(url)
         }
     }
     
@@ -273,8 +214,8 @@ struct HomeAppCardView: View {
             
             Spacer(minLength: 5)
             
-            // وشەکە گۆڕدرا بۆ GET یان DOWNLOAD
-            Text("DOWNLOAD")
+            // 💡 لێرەدا GETم گۆڕی بۆ OPEN
+            Text("OPEN")
                 .font(.system(size: 13, weight: .bold, design: .rounded))
                 .frame(maxWidth: .infinity)
                 .frame(height: 30)
@@ -291,7 +232,6 @@ struct HomeAppCardView: View {
 }
 
 // MARK: - Social Media Footer
-// (وەک خۆی هێڵراوەتەوە)
 struct SocialMediaFooter: View {
     var body: some View {
         VStack(spacing: 20) {
