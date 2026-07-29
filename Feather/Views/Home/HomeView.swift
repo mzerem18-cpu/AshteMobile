@@ -3,7 +3,7 @@
 //  AshteMobile
 //
 //  Created for AshteMobile
-//  Modified to redirect downloads to external website
+//  Modernized & Professional UI Redesign
 //
 
 import SwiftUI
@@ -57,7 +57,7 @@ struct HomeView: View {
         "https://www.instagram.com/ashtemobile"
     ]
     
-    let timer = Timer.publish(every: 4, on: .main, in: .common).autoconnect()
+    let timer = Timer.publish(every: 5, on: .main, in: .common).autoconnect()
     
     var groupedApps: [(String, [HomeApp])] {
         let dict = Dictionary(grouping: apps, by: { $0.category ?? "Apps" })
@@ -66,13 +66,18 @@ struct HomeView: View {
     
     var body: some View {
         ZStack(alignment: .top) {
-            Color(UIColor.systemBackground).ignoresSafeArea()
+            // باکگراوندێکی مۆدێرن و نەرم
+            LinearGradient(
+                gradient: Gradient(colors: [Color(UIColor.systemBackground), Color(UIColor.secondarySystemBackground)]),
+                startPoint: .top,
+                endPoint: .bottom
+            ).ignoresSafeArea()
             
             NBNavigationView("Discover") {
-                ScrollView {
+                ScrollView(showsIndicators: false) {
                     VStack(spacing: 35) {
                         
-                        // 1. بەشی وێنە لاکێشەییەکان (Banners)
+                        // 1. بەشی وێنە لاکێشەییەکان (Banners) بە ستایلی نوێ
                         if !myCustomBanners.isEmpty {
                             TabView(selection: $currentBanner) {
                                 ForEach(0..<myCustomBanners.count, id: \.self) { index in
@@ -85,67 +90,79 @@ struct HomeView: View {
                                             image.resizable()
                                                  .aspectRatio(contentMode: .fill)
                                         } placeholder: {
-                                            Color(UIColor.secondarySystemBackground)
-                                                .overlay(Image(systemName: "photo").foregroundColor(.gray.opacity(0.5)))
+                                            ZStack {
+                                                Color(UIColor.secondarySystemBackground)
+                                                ProgressView()
+                                            }
                                         }
                                     }
-                                    .buttonStyle(.plain)
+                                    .buttonStyle(ModernScaleButtonStyle())
                                     .tag(index)
                                 }
                             }
-                            .frame(height: (UIScreen.main.bounds.width - 40) * (1948.0 / 3464.0))
-                            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                            .frame(height: (UIScreen.main.bounds.width - 40) * (1800.0 / 3464.0))
+                            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                             .padding(.horizontal, 20)
-                            .shadow(color: Color.black.opacity(0.12), radius: 10, x: 0, y: 5)
+                            .shadow(color: Color.black.opacity(0.15), radius: 15, x: 0, y: 8)
                             .tabViewStyle(PageTabViewStyle(indexDisplayMode: .always))
                             .onReceive(timer) { _ in
                                 guard !myCustomBanners.isEmpty else { return }
-                                withAnimation(.easeInOut(duration: 0.5)) {
+                                withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
                                     currentBanner = (currentBanner + 1) % myCustomBanners.count
                                 }
                             }
                         }
                         
-                        // 2. بەشی یاری و بەرنامەکان
-                        VStack(alignment: .leading, spacing: 30) {
+                        // 2. بەشی یاری و بەرنامەکان بە دیزاینی App Store
+                        VStack(alignment: .leading, spacing: 32) {
                             ForEach(groupedApps, id: \.0) { category, categoryApps in
-                                VStack(alignment: .leading, spacing: 16) {
-                                    HStack(alignment: .lastTextBaseline) {
+                                VStack(alignment: .leading, spacing: 18) {
+                                    
+                                    // هێدەری بەشەکان
+                                    HStack(alignment: .center) {
                                         Text(category)
-                                            .font(.system(size: 22, weight: .bold, design: .rounded))
+                                            .font(.system(size: 24, weight: .bold, design: .rounded))
                                             .foregroundColor(.primary)
                                         Spacer()
-                                        Text("See All")
-                                            .font(.system(size: 15, weight: .semibold, design: .rounded))
+                                        Button(action: {
+                                            // بۆ داهاتوو: کردنەوەی لیستی هەموو بەرنامەکانی ئەم بەشە
+                                        }) {
+                                            HStack(spacing: 4) {
+                                                Text("See All")
+                                                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                                                Image(systemName: "chevron.right")
+                                                    .font(.system(size: 12, weight: .bold))
+                                            }
                                             .foregroundColor(.blue)
+                                        }
                                     }
                                     .padding(.horizontal, 20)
                                     
+                                    // لیستی بەرنامەکان
                                     ScrollView(.horizontal, showsIndicators: false) {
-                                        LazyHStack(spacing: 16) {
+                                        LazyHStack(spacing: 20) {
                                             ForEach(categoryApps) { app in
                                                 Button(action: {
                                                     openWebsite()
                                                 }) {
                                                     HomeAppCardView(app: app)
                                                 }
-                                                .buttonStyle(.plain)
+                                                .buttonStyle(ModernScaleButtonStyle())
                                             }
                                         }
                                         .padding(.horizontal, 20)
-                                        .padding(.bottom, 15)
-                                        .padding(.top, 5)
+                                        .padding(.vertical, 10)
                                     }
                                 }
                             }
                         }
                         
-                        // 3. بەشی سۆشیاڵ میدیاکان
+                        // 3. بەشی سۆشیاڵ میدیاکان بە ئیفێکتی شوشەیی (Glassmorphism)
                         SocialMediaFooter()
-                            .padding(.top, 10)
-                            .padding(.bottom, 40)
+                            .padding(.top, 15)
+                            .padding(.bottom, 50)
                     }
-                    .padding(.top, 15)
+                    .padding(.top, 20)
                 }
                 .refreshable {
                     await loadApps()
@@ -157,7 +174,7 @@ struct HomeView: View {
         }
     }
     
-    // 💡 فەنکشنی کردنەوەی وێبسایتەکە
+    // فەنکشنی کردنەوەی وێبسایتەکە
     private func openWebsite() {
         let generator = UIImpactFeedbackGenerator(style: .medium)
         generator.impactOccurred()
@@ -184,78 +201,104 @@ struct HomeView: View {
     }
 }
 
-// MARK: - App Card View
+// MARK: - App Card View (Modern UI)
 struct HomeAppCardView: View {
     let app: HomeApp
     
     var body: some View {
-        VStack(alignment: .center, spacing: 10) {
+        VStack(alignment: .center, spacing: 14) {
             
+            // ئایکۆنی بەرنامە بە سێبەری پرۆفیشناڵ
             AsyncImage(url: app.fullImageURL) { image in
-                image.resizable().aspectRatio(contentMode: .fill)
+                image.resizable()
+                     .aspectRatio(contentMode: .fill)
             } placeholder: {
-                Color(UIColor.secondarySystemBackground)
+                ZStack {
+                    Color.gray.opacity(0.1)
+                    Image(systemName: "app.dashed")
+                        .foregroundColor(.gray)
+                        .font(.system(size: 30))
+                }
             }
-            .frame(width: 80, height: 80)
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .shadow(color: Color.black.opacity(0.08), radius: 6, x: 0, y: 3)
+            .frame(width: 85, height: 85)
+            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .shadow(color: Color.black.opacity(0.15), radius: 10, x: 0, y: 5)
             
-            VStack(spacing: 2) {
+            // ناوی بەرنامە و جۆرەکەی
+            VStack(spacing: 4) {
                 Text(app.name)
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
                     .foregroundColor(.primary)
                     .lineLimit(1)
                     .multilineTextAlignment(.center)
                 
                 Text(app.category ?? "App")
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
                     .foregroundColor(.secondary)
             }
             
-            Spacer(minLength: 5)
+            Spacer(minLength: 0)
             
-            // 💡 لێرەدا GETم گۆڕی بۆ OPEN
+            // دوگمەی داگرتن بە ستایلی مۆدێرن و ڕەنگی تێکەڵاو
             Text("OPEN")
-                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .font(.system(size: 14, weight: .bold, design: .rounded))
                 .frame(maxWidth: .infinity)
-                .frame(height: 30)
-                .background(Color.blue.opacity(0.12))
-                .foregroundColor(.blue)
+                .frame(height: 34)
+                .background(
+                    LinearGradient(
+                        gradient: Gradient(colors: [Color.blue, Color.blue.opacity(0.8)]),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .foregroundColor(.white)
                 .clipShape(Capsule())
+                .shadow(color: Color.blue.opacity(0.3), radius: 5, x: 0, y: 3)
         }
-        .padding(14)
-        .frame(width: 135, height: 200)
-        .background(Color(UIColor.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
+        .padding(16)
+        .frame(width: 145, height: 215)
+        // ئیفێکتی شوشەیی بۆ باکگراوندی کاردەکە
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .stroke(Color.white.opacity(0.2), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 6)
     }
 }
 
-// MARK: - Social Media Footer
+// MARK: - Social Media Footer (Glassmorphism)
 struct SocialMediaFooter: View {
     var body: some View {
         VStack(spacing: 20) {
             Text("Connect With Us")
-                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .font(.system(size: 20, weight: .heavy, design: .rounded))
                 .foregroundColor(.primary)
             
-            HStack(spacing: 24) {
-                SocialButton(icon: "paperplane.fill", color: .blue, url: "https://t.me/ashtemobile")
-                SocialButton(icon: "camera.fill", color: Color(UIColor.systemPurple), url: "https://www.instagram.com/ashtemobile")
-                SocialButton(icon: "play.tv.fill", color: .primary, url: "https://www.tiktok.com/@ashtemobile")
+            HStack(spacing: 28) {
+                SocialModernButton(icon: "paperplane.fill", colors: [Color.cyan, Color.blue], url: "https://t.me/ashtemobile")
+                SocialModernButton(icon: "camera.fill", colors: [Color.purple, Color.orange], url: "https://www.instagram.com/ashtemobile")
+                SocialModernButton(icon: "play.tv.fill", colors: [Color.black, Color.gray], url: "https://www.tiktok.com/@ashtemobile")
             }
         }
-        .padding(.vertical, 24)
+        .padding(.vertical, 30)
         .frame(maxWidth: .infinity)
-        .background(Color(UIColor.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .background(.ultraThinMaterial) // ئیفێکتی شوشەیی
+        .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 32, style: .continuous)
+                .stroke(Color.white.opacity(0.2), lineWidth: 1)
+        )
         .padding(.horizontal, 20)
+        .shadow(color: Color.black.opacity(0.08), radius: 15, x: 0, y: 8)
     }
 }
 
-struct SocialButton: View {
+// MARK: - Modern Social Button
+struct SocialModernButton: View {
     let icon: String
-    let color: Color
+    let colors: [Color]
     let url: String
     
     var body: some View {
@@ -265,20 +308,25 @@ struct SocialButton: View {
             }
         }) {
             Image(systemName: icon)
-                .font(.system(size: 20, weight: .bold))
+                .font(.system(size: 22, weight: .bold))
                 .foregroundColor(.white)
-                .frame(width: 50, height: 50)
-                .background(color)
+                .frame(width: 55, height: 55)
+                .background(
+                    LinearGradient(gradient: Gradient(colors: colors), startPoint: .topLeading, endPoint: .bottomTrailing)
+                )
                 .clipShape(Circle())
+                .shadow(color: colors.first!.opacity(0.4), radius: 8, x: 0, y: 4)
         }
-        .buttonStyle(ScaleButtonStyle())
+        .buttonStyle(ModernScaleButtonStyle())
     }
 }
 
-struct ScaleButtonStyle: ButtonStyle {
+// MARK: - Custom Button Style for smooth animations
+struct ModernScaleButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.92 : 1)
-            .animation(.easeInOut(duration: 0.2), value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed ? 0.94 : 1)
+            .opacity(configuration.isPressed ? 0.9 : 1)
+            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: configuration.isPressed)
     }
 }
