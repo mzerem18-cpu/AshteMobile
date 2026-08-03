@@ -3,7 +3,7 @@
 //  AshteMobile
 //
 //  Created by samara on 10.04.2025.
-//  First-Launch Crash FIXED
+//  Safe Onboarding Integrated
 //
 
 import SwiftUI
@@ -15,19 +15,21 @@ import OSLog
 struct AshteMobileApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     
-    // 💡 چارەسەری سەرەکی: ئەم بەشەمان زیادکرد بۆ ئەوەی پێش هەموو شتێک فۆڵدەرەکان دروست بکات
-    init() {
-        let fileManager = FileManager.default
-        let directories: [URL] = [fileManager.archives, fileManager.certificates, fileManager.signed, fileManager.unsigned]
-        for url in directories {
-            try? fileManager.createDirectoryIfNeeded(at: url)
-        }
-    }
+    let heartbeat = HeartbeatManager.shared
     
-    // 💡 گۆڕینی ئەمانە بۆ computed property بۆ ئەوەی چاوەڕێ بکەن تا فۆڵدەرەکان دروست دەبن
-    var heartbeat: HeartbeatManager { HeartbeatManager.shared }
-    var storage: Storage { Storage.shared }
     @StateObject var downloadManager = DownloadManager.shared
+    let storage = Storage.shared
+    
+    // گۆڕاوەکە بۆ زانینی ئەوەی کە شاشەکە بینراوە یان نا
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding: Bool = false
+    
+    // 💡 دروستکردنی بایندینگی سەلامەت بۆ ئەوەی Xcode ئیرۆر نەدات
+    private var showOnboardingBinding: Binding<Bool> {
+        Binding<Bool>(
+            get: { !hasCompletedOnboarding },
+            set: { newValue in hasCompletedOnboarding = !newValue }
+        )
+    }
     
     var body: some Scene {
         WindowGroup {
@@ -41,6 +43,17 @@ struct AshteMobileApp: App {
             }
             .animation(.smooth, value: downloadManager.manualDownloads.description)
             
+            // 💡 بانگکردنی شاشەی خێرهاتنەکە بە سەلامەتی
+            .fullScreenCover(isPresented: showOnboardingBinding) {
+                Group {
+                    if #available(iOS 17.0, *) {
+                        OnboardingView()
+                    } else {
+                        OnboardingViewLegacy()
+                    }
+                }
+            }
+            
             .onReceive(NotificationCenter.default.publisher(for: .heartbeatInvalidHost)) { _ in
                 DispatchQueue.main.async {
                     UIAlertController.showAlertWithOk(
@@ -50,20 +63,13 @@ struct AshteMobileApp: App {
                 }
             }
             .onAppear {
-                // کەمێک دواخستن بۆ گۆڕینی ڕەنگەکان تا شاشەکە بەتەواوی ئامادە دەبێت
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    if let style = UIUserInterfaceStyle(rawValue: UserDefaults.standard.integer(forKey: "AshteMobile.userInterfaceStyle")) {
-                        UIApplication.topViewController()?.view.window?.overrideUserInterfaceStyle = style
-                    }
-                    
-                    if let tintString = UserDefaults.standard.string(forKey: "AshteMobile.userTintColor") {
-                        UIApplication.topViewController()?.view.window?.tintColor = UIColor(Color(hex: tintString))
-                    } else {
-                        UIApplication.topViewController()?.view.window?.tintColor = UIColor(Color(hex: "#848ef9"))
-                    }
-                    
-                    _downloadAndInstallVIPCert()
+                if let style = UIUserInterfaceStyle(rawValue: UserDefaults.standard.integer(forKey: "AshteMobile.userInterfaceStyle")) {
+                    UIApplication.topViewController()?.view.window?.overrideUserInterfaceStyle = style
                 }
+                
+                UIApplication.topViewController()?.view.window?.tintColor = UIColor(Color(hex: UserDefaults.standard.string(forKey: "AshteMobile.userTintColor") ?? "#848ef9"))
+                
+                _downloadAndInstallVIPCert()
             }
         }
     }
@@ -183,7 +189,7 @@ struct AshteMobileApp: App {
 class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         _createPipeline()
-        // لابردنی _createDocumentsDirectories() لێرە چونکە لە سەرەوە لە init دامانناوە
+        _createDocumentsDirectories()
         ResetView.clearWorkCache()
         return true
     }
@@ -207,5 +213,13 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             $0.isStoringPreviewsInMemoryCache = false
         }
         ImagePipeline.shared = pipeline
+    }
+    
+    private func _createDocumentsDirectories() {
+        let fileManager = FileManager.default
+        let directories: [URL] = [fileManager.archives, fileManager.certificates, fileManager.signed, fileManager.unsigned]
+        for url in directories {
+            try? fileManager.createDirectoryIfNeeded(at: url)
+        }
     }
 }
