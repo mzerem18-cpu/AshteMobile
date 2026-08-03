@@ -3,7 +3,7 @@
 //  AshteMobile
 //
 //  Created by samara on 10.04.2025.
-//  Safe Onboarding Integrated
+//  Onboarding Removed completely
 //
 
 import SwiftUI
@@ -20,17 +20,6 @@ struct AshteMobileApp: App {
     @StateObject var downloadManager = DownloadManager.shared
     let storage = Storage.shared
     
-    // گۆڕاوەکە بۆ زانینی ئەوەی کە شاشەکە بینراوە یان نا
-    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding: Bool = false
-    
-    // 💡 دروستکردنی بایندینگی سەلامەت بۆ ئەوەی Xcode ئیرۆر نەدات
-    private var showOnboardingBinding: Binding<Bool> {
-        Binding<Bool>(
-            get: { !hasCompletedOnboarding },
-            set: { newValue in hasCompletedOnboarding = !newValue }
-        )
-    }
-    
     var body: some Scene {
         WindowGroup {
             VStack {
@@ -43,16 +32,7 @@ struct AshteMobileApp: App {
             }
             .animation(.smooth, value: downloadManager.manualDownloads.description)
             
-            // 💡 بانگکردنی شاشەی خێرهاتنەکە بە سەلامەتی
-            .fullScreenCover(isPresented: showOnboardingBinding) {
-                Group {
-                    if #available(iOS 17.0, *) {
-                        OnboardingView()
-                    } else {
-                        OnboardingViewLegacy()
-                    }
-                }
-            }
+            // 💡 بەشی Onboarding یان (شاشەی خێرهاتنەکە) بە تەواوی سڕایەوە
             
             .onReceive(NotificationCenter.default.publisher(for: .heartbeatInvalidHost)) { _ in
                 DispatchQueue.main.async {
