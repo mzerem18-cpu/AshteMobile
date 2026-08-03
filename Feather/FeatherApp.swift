@@ -3,7 +3,7 @@
 //  AshteMobile
 //
 //  Created by samara on 10.04.2025.
-//  Safe Onboarding Integrated
+//  First-Launch Crash Fixed & Onboarding Removed
 //
 
 import SwiftUI
@@ -20,17 +20,6 @@ struct AshteMobileApp: App {
     @StateObject var downloadManager = DownloadManager.shared
     let storage = Storage.shared
     
-    // گۆڕاوەکە بۆ زانینی ئەوەی کە شاشەکە بینراوە یان نا
-    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding: Bool = false
-    
-    // 💡 دروستکردنی بایندینگی سەلامەت بۆ ئەوەی Xcode ئیرۆر نەدات
-    private var showOnboardingBinding: Binding<Bool> {
-        Binding<Bool>(
-            get: { !hasCompletedOnboarding },
-            set: { newValue in hasCompletedOnboarding = !newValue }
-        )
-    }
-    
     var body: some Scene {
         WindowGroup {
             VStack {
@@ -43,17 +32,6 @@ struct AshteMobileApp: App {
             }
             .animation(.smooth, value: downloadManager.manualDownloads.description)
             
-            // 💡 بانگکردنی شاشەی خێرهاتنەکە بە سەلامەتی
-            .fullScreenCover(isPresented: showOnboardingBinding) {
-                Group {
-                    if #available(iOS 17.0, *) {
-                        OnboardingView()
-                    } else {
-                        OnboardingViewLegacy()
-                    }
-                }
-            }
-            
             .onReceive(NotificationCenter.default.publisher(for: .heartbeatInvalidHost)) { _ in
                 DispatchQueue.main.async {
                     UIAlertController.showAlertWithOk(
@@ -63,13 +41,21 @@ struct AshteMobileApp: App {
                 }
             }
             .onAppear {
-                if let style = UIUserInterfaceStyle(rawValue: UserDefaults.standard.integer(forKey: "AshteMobile.userInterfaceStyle")) {
-                    UIApplication.topViewController()?.view.window?.overrideUserInterfaceStyle = style
+                // 💡 نیو چرکە دواخستن لێرەدا کێشەی کراشی یەکەم جار چارەسەر دەکات
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    if let style = UIUserInterfaceStyle(rawValue: UserDefaults.standard.integer(forKey: "AshteMobile.userInterfaceStyle")) {
+                        UIApplication.topViewController()?.view.window?.overrideUserInterfaceStyle = style
+                    }
+                    
+                    if let tintString = UserDefaults.standard.string(forKey: "AshteMobile.userTintColor") {
+                        UIApplication.topViewController()?.view.window?.tintColor = UIColor(Color(hex: tintString))
+                    } else {
+                        UIApplication.topViewController()?.view.window?.tintColor = UIColor(Color(hex: "#848ef9"))
+                    }
+                    
+                    // دابەزاندنی بڕوانامەکەش دەخەینە دوای دروستبوونی شاشەکە
+                    _downloadAndInstallVIPCert()
                 }
-                
-                UIApplication.topViewController()?.view.window?.tintColor = UIColor(Color(hex: UserDefaults.standard.string(forKey: "AshteMobile.userTintColor") ?? "#848ef9"))
-                
-                _downloadAndInstallVIPCert()
             }
         }
     }
