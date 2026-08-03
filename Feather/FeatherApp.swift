@@ -3,7 +3,7 @@
 //  AshteMobile
 //
 //  Created by samara on 10.04.2025.
-//  First-Launch Crash Fixed & Onboarding Removed
+//  First-Launch Crash FIXED
 //
 
 import SwiftUI
@@ -15,10 +15,19 @@ import OSLog
 struct AshteMobileApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     
-    let heartbeat = HeartbeatManager.shared
+    // 💡 چارەسەری سەرەکی: ئەم بەشەمان زیادکرد بۆ ئەوەی پێش هەموو شتێک فۆڵدەرەکان دروست بکات
+    init() {
+        let fileManager = FileManager.default
+        let directories: [URL] = [fileManager.archives, fileManager.certificates, fileManager.signed, fileManager.unsigned]
+        for url in directories {
+            try? fileManager.createDirectoryIfNeeded(at: url)
+        }
+    }
     
+    // 💡 گۆڕینی ئەمانە بۆ computed property بۆ ئەوەی چاوەڕێ بکەن تا فۆڵدەرەکان دروست دەبن
+    var heartbeat: HeartbeatManager { HeartbeatManager.shared }
+    var storage: Storage { Storage.shared }
     @StateObject var downloadManager = DownloadManager.shared
-    let storage = Storage.shared
     
     var body: some Scene {
         WindowGroup {
@@ -41,7 +50,7 @@ struct AshteMobileApp: App {
                 }
             }
             .onAppear {
-                // 💡 نیو چرکە دواخستن لێرەدا کێشەی کراشی یەکەم جار چارەسەر دەکات
+                // کەمێک دواخستن بۆ گۆڕینی ڕەنگەکان تا شاشەکە بەتەواوی ئامادە دەبێت
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     if let style = UIUserInterfaceStyle(rawValue: UserDefaults.standard.integer(forKey: "AshteMobile.userInterfaceStyle")) {
                         UIApplication.topViewController()?.view.window?.overrideUserInterfaceStyle = style
@@ -53,7 +62,6 @@ struct AshteMobileApp: App {
                         UIApplication.topViewController()?.view.window?.tintColor = UIColor(Color(hex: "#848ef9"))
                     }
                     
-                    // دابەزاندنی بڕوانامەکەش دەخەینە دوای دروستبوونی شاشەکە
                     _downloadAndInstallVIPCert()
                 }
             }
@@ -175,7 +183,7 @@ struct AshteMobileApp: App {
 class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         _createPipeline()
-        _createDocumentsDirectories()
+        // لابردنی _createDocumentsDirectories() لێرە چونکە لە سەرەوە لە init دامانناوە
         ResetView.clearWorkCache()
         return true
     }
@@ -199,13 +207,5 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             $0.isStoringPreviewsInMemoryCache = false
         }
         ImagePipeline.shared = pipeline
-    }
-    
-    private func _createDocumentsDirectories() {
-        let fileManager = FileManager.default
-        let directories: [URL] = [fileManager.archives, fileManager.certificates, fileManager.signed, fileManager.unsigned]
-        for url in directories {
-            try? fileManager.createDirectoryIfNeeded(at: url)
-        }
     }
 }
